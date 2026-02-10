@@ -20,12 +20,21 @@ export async function GET(req: NextRequest) {
     // Calcular estadísticas
     const colectasConEstadisticas = colectas.map((colecta: (typeof colectas)[number]) => {
       const totalAportado = colecta.aportes
-        .filter((a: typeof colecta.aportes[number]) => a.estado === "aportado")
-        .reduce((sum: number, a: typeof colecta.aportes[number]) => sum + a.cantidad, 0);
+        .filter((a: (typeof colecta.aportes)[number]) => a.estado === "aportado")
+        .reduce(
+          (sum: number, a: (typeof colecta.aportes)[number]) => sum + a.cantidad,
+          0,
+        );
       const totalComprometido = colecta.aportes
-        .filter((a: typeof colecta.aportes[number]) => a.estado === "comprometido")
-        .reduce((sum: number, a: typeof colecta.aportes[number]) => sum + a.cantidad, 0);
-      const totalGastos = colecta.gastos.reduce((sum: number, g: typeof colecta.gastos[number]) => sum + g.cantidad, 0);
+        .filter((a: (typeof colecta.aportes)[number]) => a.estado === "comprometido")
+        .reduce(
+          (sum: number, a: (typeof colecta.aportes)[number]) => sum + a.cantidad,
+          0,
+        );
+      const totalGastos = colecta.gastos.reduce(
+        (sum: number, g: (typeof colecta.gastos)[number]) => sum + g.cantidad,
+        0,
+      );
       const saldo = totalAportado - totalGastos;
 
       return {
