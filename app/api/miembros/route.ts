@@ -13,15 +13,15 @@ export async function GET() {
       },
     });
 
-    const miembrosConEstadisticas = miembros.map((miembro) => {
+    const miembrosConEstadisticas = miembros.map((miembro: typeof miembros[number]) => {
       const totalAportado = miembro.aportes
-        .filter((a) => a.estado === "aportado")
-        .reduce((sum, a) => sum + a.cantidad, 0);
+        .filter((a: typeof miembro.aportes[number]) => a.estado === "aportado")
+        .reduce((sum: number, a: typeof miembro.aportes[number]) => sum + a.cantidad, 0);
       const totalComprometido = miembro.aportes
-        .filter((a) => a.estado === "comprometido")
-        .reduce((sum, a) => sum + a.cantidad, 0);
+        .filter((a: typeof miembro.aportes[number]) => a.estado === "comprometido")
+        .reduce((sum: number, a: typeof miembro.aportes[number]) => sum + a.cantidad, 0);
       const totalGastos = miembro.gastosRealizados.reduce(
-        (sum, g) => sum + g.cantidad,
+        (sum: number, g: typeof miembro.gastosRealizados[number]) => sum + g.cantidad,
         0,
       );
 
