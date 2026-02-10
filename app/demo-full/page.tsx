@@ -14,7 +14,7 @@ interface Colecta {
   porcentaje: number;
 }
 
-export default function Home() {
+export default function DemoFullPage() {
   const [colectas, setColectas] = useState<Colecta[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<"todas" | "activas" | "cerradas" | "completadas">(
@@ -25,23 +25,9 @@ export default function Home() {
     const cargarColectas = async () => {
       try {
         const params = filtro === "todas" ? "" : `?estado=${filtro}`;
-
-        // Intentar API real primero, si falla usar mock
-        try {
-          const res = await fetch(`/api/colectas${params}`);
-          if (res.ok) {
-            const data = await res.json();
-            setColectas(data);
-            return;
-          }
-        } catch (error) {
-          console.log("API real no disponible, usando mock...");
-        }
-
-        // Fallback a mock si la API real falla
-        const resMock = await fetch(`/api/colectas/mock${params}`);
-        if (resMock.ok) {
-          const data = await resMock.json();
+        const res = await fetch(`/api/colectas/mock${params}`);
+        if (res.ok) {
+          const data = await res.json();
           setColectas(data);
         }
       } catch (error) {
@@ -57,13 +43,11 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b-2 border-gray-200 bg-white">
+      <header className="border-b border-gray-200 sticky top-0 z-10 bg-white">
         <div className="max-w-6xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-3xl font-bold text-gray-900 mb-1">
-            Club de Fútbol
-          </h1>
-          <p className="text-lg md:text-base text-gray-700">
-            Gestor de Colectas y Finanzas
+          <h1 className="text-3xl font-semibold text-gray-900 mb-1">Club de Fútbol</h1>
+          <p className="text-sm text-gray-600">
+            Gestor de Colectas y Finanzas - DEMO COMPLETA
           </p>
         </div>
       </header>
@@ -76,10 +60,10 @@ export default function Home() {
             <button
               key={f}
               onClick={() => setFiltro(f)}
-              className={`px-3 md:px-4 py-2 md:py-1.5 text-sm md:text-xs font-bold transition-colors capitalize border-2 rounded-lg ${
+              className={`px-3 md:px-4 py-1.5 md:py-1 text-xs md:text-xs font-medium transition-colors capitalize ${
                 filtro === f
-                  ? "bg-gray-900 text-white border-gray-900"
-                  : "border-gray-300 text-gray-900 hover:border-gray-400 hover:bg-gray-50"
+                  ? "bg-gray-900 text-white"
+                  : "border border-gray-200 text-gray-900 hover:border-gray-300"
               }`}
             >
               {f === "todas"
@@ -101,7 +85,7 @@ export default function Home() {
         ) : colectas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {colectas.map((colecta) => (
-              <Link key={colecta.id} href={`/colectas/${colecta.id}`}>
+              <Link key={colecta.id} href={`/detalle-demo/${colecta.id}`}>
                 <ColectaCard
                   id={colecta.id}
                   nombre={colecta.nombre}

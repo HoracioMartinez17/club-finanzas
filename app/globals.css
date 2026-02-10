@@ -24,3 +24,56 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Mejorar contraste de selects y opciones */
+select {
+  color: inherit;
+}
+
+select option {
+  color: #111827;
+  background-color: #ffffff;
+  padding: 8px;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #f3f4f6;
+}
+
+/* Mejorar contraste de inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="search"],
+textarea {
+  color: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: inherit;
+  opacity: 0.6;
+}
+
+input::-webkit-calendar-picker-indicator {
+  color: #6b7280;
+}
+
+.modal-dark {
+  color-scheme: dark;
+}
+
+.modal-dark input[type="date"] {
+  color-scheme: dark;
+}
+
+.modal-dark input::-webkit-calendar-picker-indicator,
+.modal-dark input::-webkit-inner-spin-button,
+.modal-dark select {
+  filter: invert(1) brightness(1.2);
+  opacity: 0.8;
+}

@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Usuario - Directiva del club
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  nombre    String
+  password  String
+  rol       String     @default("admin") // admin, tesorero
+  activo    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("users")
+}
+
+// Miembro del club
+model Miembro {
+  id                String   @id @default(cuid())
+  nombre            String
+  email             String?
+  telefono          String?
+  estado            String   @default("activo") // activo, inactivo
+  deudaCuota        Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relaciones
+  aportes           Aporte[]
+  gastosRealizados  Gasto[]
+  ingresos          Ingreso[]
+
+  @@map("miembros")
+}
+
+// Colecta especial
+model Colecta {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String?
+  objetivo    Float
+  estado      String   @default("activa") // activa, cerrada, completada
+  fechaInicio DateTime @default(now())
+  fechaCierre DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  aportes     Aporte[]
+  gastos      Gasto[]
+
+  @@map("colectas")
+}
+
+// Aporte de un miembro a una colecta (o aporte individual)
+model Aporte {
+  id            String   @id @default(cuid())
+  colecta       Colecta? @relation(fields: [colectaId], references: [id], onDelete: Cascade)
+  colectaId     String?
+  miembro       Miembro? @relation(fields: [miembroId], references: [id], onDelete: SetNull)
+  miembroId     String?
+  miembroNombre String?  // Guardar nombre para historial
+  cantidad      Float
+  estado        String   @default("aportado") // aportado, comprometido
+  metodoPago    String?  // efectivo, transferencia
+  notas         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("aportes")
+}
+
+// Gasto general del club o de una colecta
+model Gasto {
+  id              String   @id @default(cuid())
+  concepto        String
+  cantidad        Float
+  categoria       String   // jugadores, arbitros, viajes, cancha, etc
+  quienPago       Miembro? @relation(fields: [quienPagoId], references: [id], onDelete: SetNull)
+  quienPagoId     String?
+  quienPagoNombre String?  // Guardar nombre para historial
+  colecta         Colecta? @relation(fields: [colectaId], references: [id], onDelete: SetNull)
+  colectaId       String?
+  tipoGasto       String   @default("general") // general, colecta
+  comprobante     String?  // URL del comprobante
+  notas           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("gastos")
+}
+
+// Ingresos generales del club (cuotas, patrocinios, etc)
+model Ingreso {
+  id            String   @id @default(cuid())
+  concepto      String   // cuota mensual, patrocinio, merchandising
+  cantidad      Float
+  fuente        String?
+  miembro       Miembro? @relation(fields: [miembroId], references: [id], onDelete: SetNull)
+  miembroId     String?
+  miembroNombre String?  // Guardar nombre para historial
+  fecha         DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("ingresos")
+}
+
+// Configuración de la app
+model Config {
+  id                  String  @id @default(cuid())
+  transparenciaPublica Boolean @default(true) // true = mostrar detalles, false = ocultar
+  nombreClub          String  @default("Club de Fútbol")
+  descripcionClub     String?
+
+  @@map("configs")
+}
