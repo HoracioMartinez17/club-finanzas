@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { Prisma } from "@prisma/client";
+
+type ColectaWithRelations = Prisma.ColectaGetPayload<{
+  include: { aportes: true; gastos: true };
+}>;
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +23,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Calcular estadísticas
-    const colectasConEstadisticas = colectas.map((colecta) => {
+    const colectasConEstadisticas = colectas.map((colecta: ColectaWithRelations) => {
       const totalAportado = colecta.aportes
         .filter((a) => a.estado === "aportado")
         .reduce((sum, a) => sum + a.cantidad, 0);
