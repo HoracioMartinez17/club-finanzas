@@ -59,11 +59,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 bg-slate-950 text-slate-100 transition-all duration-300 overflow-y-auto md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 bg-slate-950 text-slate-100 transition-all duration-300 overflow-hidden flex flex-col md:static md:translate-x-0 ${
           sidebarOpen ? "translate-x-0 md:w-64" : "-translate-x-full md:w-20"
         }`}
       >
-        <div className="p-4 flex items-center justify-between border-b border-slate-800">
+        <div className="p-4 flex items-center justify-between border-b border-slate-800 flex-shrink-0">
           {sidebarOpen && (
             <h1 className="text-xl font-semibold tracking-wide text-slate-100">
               Club Admin
@@ -78,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
         </div>
 
-        <nav className="mt-6 px-2 flex flex-col h-[calc(100vh-120px)] gap-2">
+        <nav className="mt-6 px-2 flex flex-col gap-2 overflow-y-auto flex-1">
           <NavLink
             href="/admin/dashboard"
             icon={<FiHome />}
@@ -122,9 +122,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             open={sidebarOpen}
             hideOnDesktop={true}
           />
+        </nav>
+
+        {/* Logout Button - Always visible at bottom */}
+        <div className="p-2 border-t border-slate-800 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded transition text-rose-300 hover:bg-rose-900/30 hover:text-rose-200 mt-auto cursor-pointer ${sidebarOpen ? "" : "justify-center"}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded transition text-rose-300 hover:bg-rose-900/30 hover:text-rose-200 cursor-pointer ${sidebarOpen ? "" : "justify-center"}`}
             title={!sidebarOpen ? "Salir" : ""}
           >
             <span className="text-xl">
@@ -132,7 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </span>
             {sidebarOpen && <span>Salir</span>}
           </button>
-        </nav>
+        </div>
       </aside>
 
       {sidebarOpen && (
