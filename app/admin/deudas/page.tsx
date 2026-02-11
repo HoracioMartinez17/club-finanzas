@@ -62,6 +62,7 @@ export default function AdminDeudas() {
   const [nuevaDeuda, setNuevaDeuda] = useState({
     miembroId: "",
     concepto: "otro",
+    conceptoPersonalizado: "",
     montoOriginal: 0,
     notas: "",
   });
@@ -229,6 +230,7 @@ export default function AdminDeudas() {
     setNuevaDeuda({
       miembroId: "",
       concepto: "otro",
+      conceptoPersonalizado: "",
       montoOriginal: 0,
       notas: "",
     });
@@ -240,6 +242,7 @@ export default function AdminDeudas() {
     setNuevaDeuda({
       miembroId: "",
       concepto: "otro",
+      conceptoPersonalizado: "",
       montoOriginal: 0,
       notas: "",
     });
@@ -256,6 +259,12 @@ export default function AdminDeudas() {
       return;
     }
 
+    // Si es "otro", validar que haya un concepto personalizado
+    if (nuevaDeuda.concepto === "otro" && !nuevaDeuda.conceptoPersonalizado.trim()) {
+      toast.error("Por favor, especifica el concepto");
+      return;
+    }
+
     if (!nuevaDeuda.montoOriginal || nuevaDeuda.montoOriginal <= 0) {
       toast.error("El monto debe ser mayor a 0");
       return;
@@ -263,12 +272,18 @@ export default function AdminDeudas() {
 
     setGuardando(true);
     try {
+      // Usar concepto personalizado si es "otro"
+      const conceptoFinal =
+        nuevaDeuda.concepto === "otro"
+          ? nuevaDeuda.conceptoPersonalizado
+          : nuevaDeuda.concepto;
+
       const res = await fetch("/api/deudas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           miembroId: nuevaDeuda.miembroId,
-          concepto: nuevaDeuda.concepto,
+          concepto: conceptoFinal,
           montoOriginal: nuevaDeuda.montoOriginal,
           montoRestante: nuevaDeuda.montoOriginal,
           notas: nuevaDeuda.notas,
@@ -745,7 +760,8 @@ export default function AdminDeudas() {
                   <label className="block text-sm font-medium text-slate-300 mb-1">
                     Concepto *
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={deudaEditando.concepto}
                     onChange={(e) =>
                       setDeudaEditando({
@@ -753,14 +769,9 @@ export default function AdminDeudas() {
                         concepto: e.target.value,
                       })
                     }
+                    placeholder="Ej: comidas, transporte, préstamo, etc."
                     className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  >
-                    {CONCEPTOS.slice(1).map((concepto) => (
-                      <option key={concepto} value={concepto}>
-                        {concepto}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 {/* Monto Original */}
@@ -924,6 +935,10 @@ export default function AdminDeudas() {
                       setNuevaDeuda({
                         ...nuevaDeuda,
                         concepto: e.target.value,
+                        conceptoPersonalizado:
+                          e.target.value === "otro"
+                            ? nuevaDeuda.conceptoPersonalizado
+                            : "",
                       })
                     }
                     className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -935,6 +950,27 @@ export default function AdminDeudas() {
                     ))}
                   </select>
                 </div>
+
+                {/* Concepto Personalizado (si selecciona "otro") */}
+                {nuevaDeuda.concepto === "otro" && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Especificar concepto *
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevaDeuda.conceptoPersonalizado}
+                      onChange={(e) =>
+                        setNuevaDeuda({
+                          ...nuevaDeuda,
+                          conceptoPersonalizado: e.target.value,
+                        })
+                      }
+                      placeholder="Ej: mantenimiento, servicios, etc."
+                      className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                )}
 
                 {/* Monto */}
                 <div>
