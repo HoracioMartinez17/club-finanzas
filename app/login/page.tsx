@@ -150,6 +150,7 @@ export default function LoginPage() {
             </Link>
           </p>
           <p className="text-xs text-slate-500">© 2026 Club Finanzas</p>
+          <p className="text-xs text-slate-600">Creado por <span className="text-purple-500 font-medium">Horacio Benítez</span></p>
         </div>
       </div>
     </div>

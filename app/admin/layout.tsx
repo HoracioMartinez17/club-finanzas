@@ -151,7 +151,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-slate-950/95 border-b border-slate-800 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <header className="bg-slate-950/95 border-b border-slate-800 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -177,8 +177,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6 bg-slate-900/20">
-          {children}
+        <main className="flex-1 overflow-auto p-4 sm:p-6 bg-slate-900/20 flex flex-col">
+          <div className="flex-1">{children}</div>
+
+          {/* Footer */}
+          <footer className="text-center py-4 border-t border-slate-800/50 mt-8 flex-shrink-0">
+            <p className="text-xs text-slate-600">
+              © 2026 Club Finanzas | Creado por{" "}
+              <span className="text-purple-600 font-bold">Horacio Benítez</span>
+            </p>
+          </footer>
         </main>
       </div>
     </div>
