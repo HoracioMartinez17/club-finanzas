@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { AdminTable, TableColumn } from "@/components/AdminTable";
 import { FiPlus, FiX, FiEdit, FiTrash, FiSearch } from "react-icons/fi";
 import toast, { Toaster } from "react-hot-toast";
+import { useMiembros } from "@/lib/hooks/useData";
 
 interface Miembro {
   id: string;
@@ -16,8 +17,7 @@ interface Miembro {
 }
 
 export default function AdminMiembros() {
-  const [miembros, setMiembros] = useState<Miembro[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { miembros, isLoading: loading, mutate: recargarMiembros } = useMiembros();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -43,10 +43,11 @@ export default function AdminMiembros() {
   };
 
   const miembrosFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return miembros;
+    const miembrosArray = Array.isArray(miembros) ? miembros : [];
+    if (!busqueda.trim()) return miembrosArray;
     const busquedaLower = busqueda.toLowerCase();
-    return miembros.filter(
-      (m) =>
+    return miembrosArray.filter(
+      (m: Miembro) =>
         m.nombre.toLowerCase().includes(busquedaLower) ||
         m.email.toLowerCase().includes(busquedaLower) ||
         m.telefono.toLowerCase().includes(busquedaLower),
@@ -54,10 +55,11 @@ export default function AdminMiembros() {
   }, [miembros, busqueda]);
 
   const resumen = useMemo(() => {
-    const total = miembros.length;
-    const activos = miembros.filter((m) => m.estado === "activo").length;
-    const inactivos = miembros.filter((m) => m.estado === "inactivo").length;
-    const deudaTotal = miembros.reduce((sum, m) => sum + (m.deudaCuota || 0), 0);
+    const miembrosArray = Array.isArray(miembros) ? miembros : [];
+    const total = miembrosArray.length;
+    const activos = miembrosArray.filter((m: Miembro) => m.estado === "activo").length;
+    const inactivos = miembrosArray.filter((m: Miembro) => m.estado === "inactivo").length;
+    const deudaTotal = miembrosArray.reduce((sum: number, m: Miembro) => sum + (m.deudaCuota || 0), 0);
 
     return { total, activos, inactivos, deudaTotal };
   }, [miembros]);
@@ -69,50 +71,6 @@ export default function AdminMiembros() {
   // Estados para eliminar
   const [modalEliminarAbierto, setModalEliminarAbierto] = useState(false);
   const [miembroEliminar, setMiembroEliminar] = useState<Miembro | null>(null);
-
-  useEffect(() => {
-    cargarMiembros();
-  }, []);
-
-  const cargarMiembros = async () => {
-    try {
-      // Intentar API real
-      try {
-        const res = await fetch("/api/miembros");
-        if (res.ok) {
-          const data = await res.json();
-          setMiembros(data);
-          return;
-        }
-      } catch {
-        console.log("API real no disponible");
-      }
-
-      // Fallback a datos simulados
-      setMiembros([
-        {
-          id: "1",
-          nombre: "Juan García",
-          email: "juan@example.com",
-          telefono: "123456789",
-          estado: "activo",
-          deudaCuota: 0,
-        },
-        {
-          id: "2",
-          nombre: "María López",
-          email: "maria@example.com",
-          telefono: "987654321",
-          estado: "activo",
-          deudaCuota: 50,
-        },
-      ]);
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEdit = (miembro: Miembro) => {
     setMiembroEditando(miembro);
@@ -151,7 +109,7 @@ export default function AdminMiembros() {
         toast.success("Miembro actualizado correctamente");
         setModalEditarAbierto(false);
         setMiembroEditando(null);
-        cargarMiembros();
+        recargarMiembros();
       } else {
         const error = await res.json();
         toast.error(error.error || "Error al actualizar el miembro");
@@ -176,7 +134,7 @@ export default function AdminMiembros() {
       const data = await res.json();
 
       if (res.ok) {
-        setMiembros(miembros.filter((m) => m.id !== miembroEliminar.id));
+        recargarMiembros();
         toast.success("Miembro eliminado correctamente");
         setModalEliminarAbierto(false);
         setMiembroEliminar(null);
@@ -220,7 +178,7 @@ export default function AdminMiembros() {
           estado: "activo",
           deudaCuota: 0,
         });
-        cargarMiembros();
+        recargarMiembros();
       } else {
         const error = await res.json();
         toast.error(error.error || "Error al crear el miembro");

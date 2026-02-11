@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AdminTable, TableColumn } from "@/components/AdminTable";
 import { FiPlus, FiX } from "react-icons/fi";
 import toast, { Toaster } from "react-hot-toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useColectas } from "@/lib/hooks/useData";
 
 interface Colecta {
   id: string;
@@ -18,8 +19,7 @@ interface Colecta {
 }
 
 export default function AdminColectas() {
-  const [colectas, setColectas] = useState<Colecta[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { colectas, isLoading: loading, mutate: recargarColectas } = useColectas();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [mostrarConfirm, setMostrarConfirm] = useState(false);
@@ -47,34 +47,15 @@ export default function AdminColectas() {
   };
 
   const resumen = useMemo(() => {
-    const total = colectas.length;
-    const activas = colectas.filter((c) => c.estado === "activa").length;
-    const objetivoTotal = colectas.reduce((sum, c) => sum + (c.objetivo || 0), 0);
-    const aportadoTotal = colectas.reduce((sum, c) => sum + (c.totalAportado || 0), 0);
+    const colectasArray = Array.isArray(colectas) ? colectas : [];
+    const total = colectasArray.length;
+    const activas = colectasArray.filter((c: Colecta) => c.estado === "activa").length;
+    const objetivoTotal = colectasArray.reduce((sum: number, c: Colecta) => sum + (c.objetivo || 0), 0);
+    const aportadoTotal = colectasArray.reduce((sum: number, c: Colecta) => sum + (c.totalAportado || 0), 0);
     const faltanteTotal = Math.max(objetivoTotal - aportadoTotal, 0);
 
     return { total, activas, objetivoTotal, aportadoTotal, faltanteTotal };
   }, [colectas]);
-
-  useEffect(() => {
-    cargarColectas();
-  }, []);
-
-  const cargarColectas = async () => {
-    try {
-      const res = await fetch("/api/colectas");
-      if (!res.ok) {
-        throw new Error("Error al cargar colectas");
-      }
-
-      const data = await res.json();
-      setColectas(data);
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEdit = (colecta: Colecta) => {
     // Navegar a la página de detalle/edición de la colecta
@@ -95,7 +76,7 @@ export default function AdminColectas() {
       });
 
       if (res.ok) {
-        setColectas(colectas.filter((c) => c.id !== colectaEliminar.id));
+        recargarColectas();
         toast.success("Colecta eliminada correctamente");
         setMostrarConfirm(false);
         setColectaEliminar(null);
@@ -138,7 +119,7 @@ export default function AdminColectas() {
           estado: "activa",
           fechaCierre: "",
         });
-        cargarColectas();
+        recargarColectas();
       } else {
         const error = await res.json();
         toast.error(error.error || "Error al crear la colecta");

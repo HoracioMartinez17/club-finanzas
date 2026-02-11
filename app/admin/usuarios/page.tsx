@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AdminTable, TableColumn } from "@/components/AdminTable";
 import { FiPlus, FiX, FiSave, FiEye, FiEyeOff } from "react-icons/fi";
 import toast, { Toaster } from "react-hot-toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useUsuarios } from "@/lib/hooks/useData";
 
 interface Usuario {
   id: string;
@@ -23,8 +24,7 @@ interface FormErrors {
 }
 
 export default function AdminUsuarios() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { usuarios, isLoading: loading, mutate: recargarUsuarios } = useUsuarios();
   const [guardando, setGuardando] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
@@ -40,50 +40,6 @@ export default function AdminUsuarios() {
     rol: "admin",
   });
   const [errors, setErrors] = useState<FormErrors>({});
-
-  useEffect(() => {
-    cargarUsuarios();
-  }, []);
-
-  const cargarUsuarios = async () => {
-    try {
-      // Intentar API real
-      try {
-        const res = await fetch("/api/usuarios");
-        if (res.ok) {
-          const data = await res.json();
-          setUsuarios(data);
-          return;
-        }
-      } catch {
-        console.log("API real no disponible");
-      }
-
-      // Fallback a datos simulados
-      setUsuarios([
-        {
-          id: "1",
-          nombre: "Admin Principal",
-          email: "admin@club.com",
-          rol: "admin",
-          activo: true,
-          fechaCreacion: "2024-01-01",
-        },
-        {
-          id: "2",
-          nombre: "Tesorero",
-          email: "tesorero@club.com",
-          rol: "tesorero",
-          activo: true,
-          fechaCreacion: "2024-01-05",
-        },
-      ]);
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -147,7 +103,7 @@ export default function AdminUsuarios() {
       if (res.ok) {
         toast.success("Usuario creado correctamente");
         cerrarModal();
-        cargarUsuarios();
+        recargarUsuarios();
       } else {
         const data = await res.json();
         toast.error(data.message || "Error al crear el usuario");
@@ -223,7 +179,7 @@ export default function AdminUsuarios() {
       if (res.ok) {
         toast.success("Usuario actualizado correctamente");
         cerrarModalEditar();
-        cargarUsuarios();
+        recargarUsuarios();
       } else {
         const data = await res.json();
         toast.error(data.message || "Error al actualizar el usuario");
@@ -249,7 +205,7 @@ export default function AdminUsuarios() {
         method: "DELETE",
       });
       if (res.ok) {
-        setUsuarios(usuarios.filter((u) => u.id !== usuarioEliminar.id));
+        recargarUsuarios();
         toast.success("Usuario eliminado correctamente");
         setMostrarConfirm(false);
         setUsuarioEliminar(null);
