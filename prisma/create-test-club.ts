@@ -21,8 +21,20 @@ async function main() {
   const slug = getArgValue("slug") || slugify(name) || "club-prueba";
   const planId = getArgValue("plan") || "free";
   const email = getArgValue("email") || `admin.${slug}@club.com`;
-  const password =
-    getArgValue("password") || process.env.TEST_CLUB_ADMIN_PASSWORD || "***REMOVED***";
+
+  // Get password from command line, env var, or require input
+  let password = getArgValue("password") || process.env.TEST_CLUB_ADMIN_PASSWORD;
+
+  // Security warning if using fallback
+  if (!password) {
+    console.warn("\n⚠️  SECURITY WARNING:");
+    console.warn("   No password provided via --password or TEST_CLUB_ADMIN_PASSWORD");
+    console.warn(
+      "   Usage: ts-node prisma/create-test-club.ts --name='Club' --password='YourSecurePassword'",
+    );
+    console.warn("   Falling back to default test password (DEVELOPMENT ONLY)");
+    password = "***REMOVED***";
+  }
 
   console.log("\n🏟️  Creando club de prueba...");
   console.log(`   Nombre: ${name}`);
