@@ -39,6 +39,7 @@ model Miembro {
   aportes           Aporte[]
   gastosRealizados  Gasto[]
   ingresos          Ingreso[]
+  deudas            Deuda[]
 
   @@map("miembros")
 }
@@ -114,6 +115,40 @@ model Ingreso {
   updatedAt     DateTime @updatedAt
 
   @@map("ingresos")
+}
+
+// Deudas del club hacia miembros
+model Deuda {
+  id              String   @id @default(cuid())
+  miembro         Miembro  @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  miembroId       String
+  concepto        String   // comidas, transporte, préstamo, compra de equipos, etc
+  montoOriginal   Float    // Monto total de la deuda
+  montoPagado     Float    @default(0) // Cuánto se ha pagado hasta ahora
+  montoRestante   Float    // Se calcula como montoOriginal - montoPagado
+  estado          String   @default("pendiente") // pendiente, parcial_pagada, pagada
+  fecha           DateTime @default(now())
+  notas           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relaciones
+  pagos           PagoDeuda[]
+
+  @@map("deudas")
+}
+
+// Registro de pagos de deudas
+model PagoDeuda {
+  id        String   @id @default(cuid())
+  deuda     Deuda    @relation(fields: [deudaId], references: [id], onDelete: Cascade)
+  deudaId   String
+  cantidad  Float
+  fecha     DateTime @default(now())
+  notas     String?
+  createdAt DateTime @default(now())
+
+  @@map("pagos_deuda")
 }
 
 // Configuración de la app
