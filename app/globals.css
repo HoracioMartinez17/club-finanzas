@@ -2,11 +2,11 @@
 
 /* Select y option styling para dark mode */
 select {
-  color: inherit;
+  color: #d6d7d9;
 }
 
 select option {
-  color: #111827;
+  color: #0b1223;
   background-color: #ffffff;
   padding: 8px;
 }

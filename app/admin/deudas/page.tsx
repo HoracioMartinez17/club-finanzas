@@ -626,7 +626,7 @@ export default function AdminDeudas() {
               className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {ESTADOS_DEUDA.map((estado) => (
-                <option key={estado} value={estado} style={{ color: "white", backgroundColor: "#1e293b" }}>
+                <option key={estado} value={estado}>
                   {estado === "parcial_pagada" ? "Parcialmente Pagada" : estado}
                 </option>
               ))}
@@ -643,7 +643,7 @@ export default function AdminDeudas() {
               className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {CONCEPTOS.map((concepto) => (
-                <option key={concepto} value={concepto} style={{ color: "white", backgroundColor: "#1e293b" }}>
+                <option key={concepto} value={concepto}>
                   {concepto}
                 </option>
               ))}
@@ -756,7 +756,7 @@ export default function AdminDeudas() {
                     className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     {CONCEPTOS.slice(1).map((concepto) => (
-                      <option key={concepto} value={concepto} style={{ color: "white", backgroundColor: "#1e293b" }}>
+                      <option key={concepto} value={concepto}>
                         {concepto}
                       </option>
                     ))}
@@ -904,9 +904,9 @@ export default function AdminDeudas() {
                     }
                     className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
-                    <option value="" style={{ color: "white", backgroundColor: "#1e293b" }}>Seleccionar miembro...</option>
+                    <option value="">Seleccionar miembro...</option>
                     {miembros.map((miembro) => (
-                      <option key={miembro.id} value={miembro.id} style={{ color: "white", backgroundColor: "#1e293b" }}>
+                      <option key={miembro.id} value={miembro.id}>
                         {miembro.nombre}
                       </option>
                     ))}
@@ -929,7 +929,7 @@ export default function AdminDeudas() {
                     className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     {CONCEPTOS.slice(1).map((concepto) => (
-                      <option key={concepto} value={concepto} style={{ color: "white", backgroundColor: "#1e293b" }}>
+                      <option key={concepto} value={concepto}>
                         {concepto}
                       </option>
                     ))}
