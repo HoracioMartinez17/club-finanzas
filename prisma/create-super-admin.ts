@@ -6,9 +6,22 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🔧 Creando Super Administrador...\n");
 
-  const email = "superadmin@clubfinanzas.com";
-  const password = "SuperAdmin123!";
+  // Use environment variables for security, with defaults only for development
+  const email =
+    process.env.SUPERADMIN_EMAIL || "superadmin@clubfinanzas.com";
+  const password =
+    process.env.SUPERADMIN_PASSWORD || "SuperAdmin123!";
   const nombre = "Super Administrador";
+
+  if (!process.env.SUPERADMIN_PASSWORD) {
+    console.log(
+      "⚠️  IMPORTANTE: SUPERADMIN_PASSWORD no está definida en .env"
+    );
+    console.log("   Usando contraseña por defecto (SOLO para desarrollo)");
+    console.log(
+      "   En producción, define SUPERADMIN_PASSWORD en tus variables de entorno\n"
+    );
+  }
 
   // Verificar si ya existe
   const existingUser = await prisma.user.findUnique({
