@@ -179,15 +179,23 @@ export default function AdminDeudas() {
   const confirmarEliminacion = async () => {
     if (!deudaEliminar) return;
 
+    const idEliminar = deudaEliminar.id;
+
+    // Eliminar de UI inmediatamente
+    setDeudas(deudas.filter((d) => d.id !== idEliminar));
+    toast.success("Deuda eliminada correctamente");
+    setMostrarConfirm(false);
+    setDeudaEliminar(null);
+
     try {
-      const res = await fetch(`/api/deudas/${deudaEliminar.id}`, {
+      const res = await fetch(`/api/deudas/${idEliminar}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        setDeudas(deudas.filter((d) => d.id !== deudaEliminar.id));
-        toast.success("Deuda eliminada correctamente");
-        setMostrarConfirm(false);
-        setDeudaEliminar(null);
+
+      if (!res.ok) {
+        // Si falla, revertir
+        toast.error("Error al eliminar la deuda");
+        cargarDeudas();
       }
     } catch (error) {
       console.error("Error al eliminar:", error);
@@ -357,14 +365,35 @@ export default function AdminDeudas() {
       return;
     }
 
+    // Agregar con ID temporal
+    const tempId = `temp-${Date.now()}`;
+    const conceptoFinal =
+      nuevaDeuda.concepto === "otro"
+        ? nuevaDeuda.conceptoPersonalizado
+        : nuevaDeuda.concepto;
+
+    const nuevaDeudaObj = {
+      id: tempId,
+      miembroNombre:
+        nuevaDeuda.tipoDeuda === "miembro"
+          ? miembros.find((m) => m.id === nuevaDeuda.miembroId)?.nombre || "N/A"
+          : nuevaDeuda.miembroNombre,
+      concepto: conceptoFinal,
+      montoOriginal: nuevaDeuda.montoOriginal,
+      montoRestante: nuevaDeuda.montoOriginal,
+      montoPagado: 0,
+      estado: "pendiente",
+      notas: nuevaDeuda.notas,
+      fecha: new Date().toISOString(),
+      fechaCreacion: new Date().toLocaleDateString(),
+    };
+
+    setDeudas([...deudas, nuevaDeudaObj]);
+    toast.success("Deuda registrada correctamente");
+    cerrarModalNuevo();
+
     setGuardando(true);
     try {
-      // Usar concepto personalizado si es "otro"
-      const conceptoFinal =
-        nuevaDeuda.concepto === "otro"
-          ? nuevaDeuda.conceptoPersonalizado
-          : nuevaDeuda.concepto;
-
       const res = await fetch("/api/deudas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -380,8 +409,7 @@ export default function AdminDeudas() {
       });
 
       if (res.ok) {
-        toast.success("Deuda registrada correctamente");
-        cerrarModalNuevo();
+        // Recargar para obtener ID real
         cargarDeudas();
       } else {
         const error = await res.json();
@@ -410,6 +438,28 @@ export default function AdminDeudas() {
       return;
     }
 
+    const deudasAnteriores = [...deudas];
+
+    // Actualizar UI inmediatamente
+    const nuevoMontoRestante = deudaPago.montoRestante - montoPago;
+    const nuevoMontoPagado = deudaPago.montoPagado + montoPago;
+    const nuevoEstado = nuevoMontoRestante === 0 ? "pagada" : "pendiente";
+
+    setDeudas(
+      deudas.map((d) =>
+        d.id === deudaPago.id
+          ? {
+              ...d,
+              montoRestante: nuevoMontoRestante,
+              montoPagado: nuevoMontoPagado,
+              estado: nuevoEstado,
+            }
+          : d,
+      ),
+    );
+    toast.success("Pago registrado correctamente");
+    cerrarModalPago();
+
     setGuardando(true);
     try {
       const res = await fetch(`/api/deudas/${deudaPago.id}/pago`, {
@@ -422,8 +472,7 @@ export default function AdminDeudas() {
       });
 
       if (res.ok) {
-        toast.success("Pago registrado correctamente");
-        cerrarModalPago();
+        // Recargar para sincronizar con el servidor
         cargarDeudas();
       } else {
         const error = await res.json();
@@ -682,12 +731,12 @@ export default function AdminDeudas() {
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 text-slate-100">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            Mayor Deudor
+            Mayor Acreedor
           </p>
           <p className="mt-2 text-lg font-semibold text-amber-300">
             {estadisticas.miembroMayorDeuda}
           </p>
-          <p className="text-xs text-slate-500">Mayor adeudo</p>
+          <p className="text-xs text-slate-500">A quien más debemos</p>
         </div>
       </section>
 

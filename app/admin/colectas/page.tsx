@@ -19,7 +19,13 @@ interface Colecta {
 }
 
 export default function AdminColectas() {
-  const { colectas, isLoading: loading, mutate: recargarColectas } = useColectas();
+  const {
+    colectas,
+    isLoading: loading,
+    mutate: recargarColectas,
+    optimisticAdd,
+    optimisticDelete,
+  } = useColectas();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [mostrarConfirm, setMostrarConfirm] = useState(false);
@@ -50,8 +56,14 @@ export default function AdminColectas() {
     const colectasArray = Array.isArray(colectas) ? colectas : [];
     const total = colectasArray.length;
     const activas = colectasArray.filter((c: Colecta) => c.estado === "activa").length;
-    const objetivoTotal = colectasArray.reduce((sum: number, c: Colecta) => sum + (c.objetivo || 0), 0);
-    const aportadoTotal = colectasArray.reduce((sum: number, c: Colecta) => sum + (c.totalAportado || 0), 0);
+    const objetivoTotal = colectasArray.reduce(
+      (sum: number, c: Colecta) => sum + (c.objetivo || 0),
+      0,
+    );
+    const aportadoTotal = colectasArray.reduce(
+      (sum: number, c: Colecta) => sum + (c.totalAportado || 0),
+      0,
+    );
     const faltanteTotal = Math.max(objetivoTotal - aportadoTotal, 0);
 
     return { total, activas, objetivoTotal, aportadoTotal, faltanteTotal };
@@ -70,19 +82,24 @@ export default function AdminColectas() {
   const confirmarEliminacion = async () => {
     if (!colectaEliminar) return;
 
+    const idEliminar = colectaEliminar.id;
+
+    // Eliminar de UI inmediatamente
+    optimisticDelete(idEliminar);
+    toast.success("Colecta eliminada correctamente");
+    setMostrarConfirm(false);
+    setColectaEliminar(null);
+
     try {
-      const res = await fetch(`/api/colectas/${colectaEliminar.id}`, {
+      const res = await fetch(`/api/colectas/${idEliminar}`, {
         method: "DELETE",
       });
 
-      if (res.ok) {
-        recargarColectas();
-        toast.success("Colecta eliminada correctamente");
-        setMostrarConfirm(false);
-        setColectaEliminar(null);
-      } else {
+      if (!res.ok) {
+        // Si falla, revertir
         const error = await res.json();
         toast.error(error.error || "Error al eliminar la colecta");
+        recargarColectas();
       }
     } catch (error) {
       console.error("Error al eliminar:", error);
@@ -101,6 +118,24 @@ export default function AdminColectas() {
       return;
     }
 
+    // Agregar con ID temporal
+    const tempId = `temp-${Date.now()}`;
+    optimisticAdd({
+      id: tempId,
+      ...nuevaColecta,
+      totalAportado: 0,
+    });
+
+    toast.success("Colecta creada correctamente");
+    setModalAbierto(false);
+    setNuevaColecta({
+      nombre: "",
+      descripcion: "",
+      objetivo: 0,
+      estado: "activa",
+      fechaCierre: "",
+    });
+
     setGuardando(true);
     try {
       const res = await fetch("/api/colectas", {
@@ -110,15 +145,7 @@ export default function AdminColectas() {
       });
 
       if (res.ok) {
-        toast.success("Colecta creada correctamente");
-        setModalAbierto(false);
-        setNuevaColecta({
-          nombre: "",
-          descripcion: "",
-          objetivo: 0,
-          estado: "activa",
-          fechaCierre: "",
-        });
+        // Recargar para obtener ID real
         recargarColectas();
       } else {
         const error = await res.json();

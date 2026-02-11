@@ -126,15 +126,23 @@ export default function AdminAportes() {
   const confirmarEliminacion = async () => {
     if (!aporteEliminar) return;
 
+    const idEliminar = aporteEliminar.id;
+
+    // Eliminar de UI inmediatamente
+    setAportes(aportes.filter((a) => a.id !== idEliminar));
+    toast.success("Aporte eliminado correctamente");
+    setMostrarConfirm(false);
+    setAporteEliminar(null);
+
     try {
-      const res = await fetch(`/api/colectas/aportes/${aporteEliminar.id}`, {
+      const res = await fetch(`/api/colectas/aportes/${idEliminar}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        setAportes(aportes.filter((a) => a.id !== aporteEliminar.id));
-        toast.success("Aporte eliminado correctamente");
-        setMostrarConfirm(false);
-        setAporteEliminar(null);
+
+      if (!res.ok) {
+        // Si falla, revertir
+        toast.error("Error al eliminar el aporte");
+        cargarAportes();
       }
     } catch (error) {
       console.error("Error al eliminar:", error);
@@ -240,6 +248,23 @@ export default function AdminAportes() {
       return;
     }
 
+    // Agregar con ID temporal
+    const tempId = `temp-${Date.now()}`;
+    const nuevoAporteObj = {
+      id: tempId,
+      miembroNombre:
+        miembros.find((m) => m.id === nuevoAporte.miembroId)?.nombre || "N/A",
+      colectaNombre: "N/A",
+      cantidad: nuevoAporte.cantidad,
+      estado: nuevoAporte.estado,
+      metodoPago: nuevoAporte.metodoPago,
+      fecha: new Date().toISOString(),
+    };
+
+    setAportes([...aportes, nuevoAporteObj]);
+    toast.success("Aporte registrado correctamente");
+    cerrarModalNuevo();
+
     setGuardando(true);
     try {
       const res = await fetch("/api/colectas/aportes", {
@@ -254,8 +279,7 @@ export default function AdminAportes() {
       });
 
       if (res.ok) {
-        toast.success("Aporte registrado correctamente");
-        cerrarModalNuevo();
+        // Recargar para obtener ID real
         cargarAportes();
       } else {
         const error = await res.json();

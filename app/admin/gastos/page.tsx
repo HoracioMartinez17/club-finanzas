@@ -247,6 +247,24 @@ export default function AdminGastos() {
 
     if (!validarFormulario()) return;
 
+    // Agregar con ID temporal
+    const tempId = `temp-${Date.now()}`;
+    const nuevoGasto = {
+      id: tempId,
+      descripcion: formData.concepto,
+      cantidad: parseFloat(formData.cantidad),
+      categoria:
+        formData.categoria === "otros" ? formData.categoriaCustom : formData.categoria,
+      responsable: miembros.find((m) => m.id === formData.quienPagoId)?.nombre || "",
+      quienPagoId: formData.quienPagoId,
+      fecha: new Date().toISOString(),
+      colecta: "N/A",
+    };
+
+    setGastos([...gastos, nuevoGasto]);
+    toast.success("Gasto registrado correctamente");
+    cerrarModal();
+
     setGuardando(true);
     try {
       const res = await fetch("/api/gastos", {
@@ -264,8 +282,7 @@ export default function AdminGastos() {
       });
 
       if (res.ok) {
-        toast.success("Gasto registrado correctamente");
-        cerrarModal();
+        // Recargar para obtener ID real
         cargarGastos();
       } else {
         toast.error("Error al registrar el gasto");
@@ -344,6 +361,22 @@ export default function AdminGastos() {
       return;
     }
 
+    // Actualizar UI inmediatamente
+    const gastoActualizado = {
+      ...gastoEditando,
+      cantidad: parseFloat(gastoEditando.cantidad as unknown as string),
+      categoria:
+        gastoEditando.categoria === "otros"
+          ? categoriaCustomGastoEditar
+          : gastoEditando.categoria,
+    };
+
+    setGastos(
+      gastos.map((g) => (g.id === gastoEditando.id ? (gastoActualizado as Gasto) : g)),
+    );
+    toast.success("Gasto actualizado correctamente");
+    cerrarModalEditar();
+
     setGuardando(true);
     try {
       const res = await fetch(`/api/gastos/${gastoEditando.id}`, {
@@ -360,14 +393,12 @@ export default function AdminGastos() {
         }),
       });
 
-      if (res.ok) {
-        toast.success("Gasto actualizado correctamente");
-        cerrarModalEditar();
-        cargarGastos();
-      } else {
+      if (!res.ok) {
+        // Si falla, revertir
         const error = await res.json();
         console.error("Error response:", error);
         toast.error("Error al actualizar el gasto");
+        cargarGastos();
       }
     } catch (error) {
       console.error("Error:", error);
@@ -385,15 +416,23 @@ export default function AdminGastos() {
   const confirmarEliminacion = async () => {
     if (!gastoEliminar) return;
 
+    const idEliminar = gastoEliminar.id;
+
+    // Eliminar de UI inmediatamente
+    setGastos(gastos.filter((g) => g.id !== idEliminar));
+    toast.success("Gasto eliminado correctamente");
+    setMostrarConfirm(false);
+    setGastoEliminar(null);
+
     try {
-      const res = await fetch(`/api/gastos/${gastoEliminar.id}`, {
+      const res = await fetch(`/api/gastos/${idEliminar}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        setGastos(gastos.filter((g) => g.id !== gastoEliminar.id));
-        toast.success("Gasto eliminado correctamente");
-        setMostrarConfirm(false);
-        setGastoEliminar(null);
+
+      if (!res.ok) {
+        // Si falla, revertir
+        toast.error("Error al eliminar el gasto");
+        cargarGastos();
       }
     } catch (error) {
       console.error("Error al eliminar:", error);

@@ -244,15 +244,23 @@ export default function AdminIngresos() {
   const confirmarEliminacion = async () => {
     if (!ingresoEliminar) return;
 
+    const idEliminar = ingresoEliminar.id;
+
+    // Eliminar de UI inmediatamente
+    setIngresos(ingresos.filter((i) => i.id !== idEliminar));
+    toast.success("Ingreso eliminado correctamente");
+    setMostrarConfirm(false);
+    setIngresoEliminar(null);
+
     try {
-      const res = await fetch(`/api/ingresos/${ingresoEliminar.id}`, {
+      const res = await fetch(`/api/ingresos/${idEliminar}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        setIngresos(ingresos.filter((i) => i.id !== ingresoEliminar.id));
-        toast.success("Ingreso eliminado correctamente");
-        setMostrarConfirm(false);
-        setIngresoEliminar(null);
+
+      if (!res.ok) {
+        // Si falla, revertir
+        toast.error("Error al eliminar el ingreso");
+        cargarIngresos();
       }
     } catch (error) {
       console.error("Error al eliminar:", error);
@@ -322,6 +330,24 @@ export default function AdminIngresos() {
       return;
     }
 
+    // Agregar con ID temporal
+    const tempId = `temp-${Date.now()}`;
+    const nuevoIngreso = {
+      id: tempId,
+      concepto: formData.concepto,
+      cantidad: parseFloat(formData.cantidad),
+      fuente: normalizarFuente(formData.fuente),
+      responsable: miembros.find((m) => m.id === formData.miembroId)?.nombre || "N/A",
+      miembroId: formData.miembroId,
+      fecha: formData.fecha
+        ? new Date(formData.fecha).toLocaleDateString()
+        : new Date().toLocaleDateString(),
+    };
+
+    setIngresos([...ingresos, nuevoIngreso]);
+    toast.success("Ingreso creado exitosamente");
+    cerrarModal();
+
     setGuardando(true);
 
     try {
@@ -338,8 +364,7 @@ export default function AdminIngresos() {
       });
 
       if (res.ok) {
-        toast.success("Ingreso creado exitosamente");
-        cerrarModal();
+        // Recargar para obtener ID real
         cargarIngresos();
       } else {
         const data = await res.json();

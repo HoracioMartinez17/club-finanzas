@@ -17,7 +17,14 @@ interface Miembro {
 }
 
 export default function AdminMiembros() {
-  const { miembros, isLoading: loading, mutate: recargarMiembros } = useMiembros();
+  const {
+    miembros,
+    isLoading: loading,
+    mutate: recargarMiembros,
+    optimisticAdd,
+    optimisticEdit,
+    optimisticDelete,
+  } = useMiembros();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -58,8 +65,13 @@ export default function AdminMiembros() {
     const miembrosArray = Array.isArray(miembros) ? miembros : [];
     const total = miembrosArray.length;
     const activos = miembrosArray.filter((m: Miembro) => m.estado === "activo").length;
-    const inactivos = miembrosArray.filter((m: Miembro) => m.estado === "inactivo").length;
-    const deudaTotal = miembrosArray.reduce((sum: number, m: Miembro) => sum + (m.deudaCuota || 0), 0);
+    const inactivos = miembrosArray.filter(
+      (m: Miembro) => m.estado === "inactivo",
+    ).length;
+    const deudaTotal = miembrosArray.reduce(
+      (sum: number, m: Miembro) => sum + (m.deudaCuota || 0),
+      0,
+    );
 
     return { total, activos, inactivos, deudaTotal };
   }, [miembros]);
@@ -91,6 +103,19 @@ export default function AdminMiembros() {
       return;
     }
 
+    // Actualizar UI inmediatamente (optimistic update)
+    optimisticEdit(miembroEditando.id, {
+      nombre: miembroEditando.nombre,
+      email: miembroEditando.email.trim() || null,
+      telefono: miembroEditando.telefono.trim() || null,
+      estado: miembroEditando.estado,
+      deudaCuota: miembroEditando.deudaCuota,
+    });
+
+    toast.success("Miembro actualizado correctamente");
+    setModalEditarAbierto(false);
+    setMiembroEditando(null);
+
     setGuardando(true);
     try {
       const res = await fetch(`/api/miembros/${miembroEditando.id}`, {
@@ -105,14 +130,11 @@ export default function AdminMiembros() {
         }),
       });
 
-      if (res.ok) {
-        toast.success("Miembro actualizado correctamente");
-        setModalEditarAbierto(false);
-        setMiembroEditando(null);
-        recargarMiembros();
-      } else {
+      if (!res.ok) {
+        // Si falla, revertir cambios
         const error = await res.json();
         toast.error(error.error || "Error al actualizar el miembro");
+        recargarMiembros(); // Recargar para revertir
       }
     } catch (error) {
       console.error("Error:", error);
@@ -125,17 +147,26 @@ export default function AdminMiembros() {
   const eliminarMiembro = async () => {
     if (!miembroEliminar) return;
 
+    const idEliminar = miembroEliminar.id;
+
+    // Eliminar de UI inmediatamente
+    optimisticDelete(idEliminar);
+    toast.success("Miembro eliminado correctamente");
+    setModalEliminarAbierto(false);
+    setMiembroEliminar(null);
+
     setGuardando(true);
     try {
-      const res = await fetch(`/api/miembros/${miembroEliminar.id}`, {
+      const res = await fetch(`/api/miembros/${idEliminar}`, {
         method: "DELETE",
       });
 
       const data = await res.json();
 
-      if (res.ok) {
+      if (!res.ok) {
+        // Si falla, revertir
+        toast.error(data.error || "Error al eliminar el miembro");
         recargarMiembros();
-        toast.success("Miembro eliminado correctamente");
         setModalEliminarAbierto(false);
         setMiembroEliminar(null);
       } else {
@@ -156,6 +187,25 @@ export default function AdminMiembros() {
       return;
     }
 
+    // Agregar con ID temporal para ver cambio inmediato
+    const tempId = `temp-${Date.now()}`;
+    optimisticAdd({
+      id: tempId,
+      ...nuevoMiembro,
+      email: nuevoMiembro.email.trim() || null,
+      telefono: nuevoMiembro.telefono.trim() || null,
+    });
+
+    toast.success("Miembro creado correctamente");
+    setModalAbierto(false);
+    setNuevoMiembro({
+      nombre: "",
+      email: "",
+      telefono: "",
+      estado: "activo",
+      deudaCuota: 0,
+    });
+
     setGuardando(true);
     try {
       const res = await fetch("/api/miembros", {
@@ -169,15 +219,7 @@ export default function AdminMiembros() {
       });
 
       if (res.ok) {
-        toast.success("Miembro creado correctamente");
-        setModalAbierto(false);
-        setNuevoMiembro({
-          nombre: "",
-          email: "",
-          telefono: "",
-          estado: "activo",
-          deudaCuota: 0,
-        });
+        // Recargar para obtener el ID real del servidor
         recargarMiembros();
       } else {
         const error = await res.json();

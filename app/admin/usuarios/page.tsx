@@ -24,7 +24,14 @@ interface FormErrors {
 }
 
 export default function AdminUsuarios() {
-  const { usuarios, isLoading: loading, mutate: recargarUsuarios } = useUsuarios();
+  const {
+    usuarios,
+    isLoading: loading,
+    mutate: recargarUsuarios,
+    optimisticAdd,
+    optimisticEdit,
+    optimisticDelete,
+  } = useUsuarios();
   const [guardando, setGuardando] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
@@ -92,6 +99,17 @@ export default function AdminUsuarios() {
 
     if (!validarFormulario()) return;
 
+    // Agregar con ID temporal
+    const tempId = `temp-${Date.now()}`;
+    optimisticAdd({
+      id: tempId,
+      ...formData,
+      password: "", // No mostrar password en UI
+    });
+
+    toast.success("Usuario creado correctamente");
+    cerrarModal();
+
     setGuardando(true);
     try {
       const res = await fetch("/api/usuarios", {
@@ -101,8 +119,7 @@ export default function AdminUsuarios() {
       });
 
       if (res.ok) {
-        toast.success("Usuario creado correctamente");
-        cerrarModal();
+        // Recargar para obtener ID real
         recargarUsuarios();
       } else {
         const data = await res.json();
@@ -157,32 +174,35 @@ export default function AdminUsuarios() {
 
     if (!validarFormulario(true) || !usuarioEditar) return;
 
+    const payload: any = {
+      nombre: formData.nombre,
+      email: formData.email,
+      rol: formData.rol,
+    };
+
+    // Solo incluir contraseña si se proporcionó una nueva
+    if (formData.password.trim()) {
+      payload.password = formData.password;
+    }
+
+    // Actualizar UI inmediatamente
+    optimisticEdit(usuarioEditar.id, payload);
+    toast.success("Usuario actualizado correctamente");
+    cerrarModalEditar();
+
     setGuardando(true);
     try {
-      const payload: any = {
-        nombre: formData.nombre,
-        email: formData.email,
-        rol: formData.rol,
-      };
-
-      // Solo incluir contraseña si se proporcionó una nueva
-      if (formData.password.trim()) {
-        payload.password = formData.password;
-      }
-
       const res = await fetch(`/api/usuarios/${usuarioEditar.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (res.ok) {
-        toast.success("Usuario actualizado correctamente");
-        cerrarModalEditar();
-        recargarUsuarios();
-      } else {
+      if (!res.ok) {
+        // Si falla, revertir
         const data = await res.json();
         toast.error(data.message || "Error al actualizar el usuario");
+        recargarUsuarios();
       }
     } catch (error) {
       console.error("Error:", error);
@@ -200,15 +220,23 @@ export default function AdminUsuarios() {
   const confirmarEliminacion = async () => {
     if (!usuarioEliminar) return;
 
+    const idEliminar = usuarioEliminar.id;
+
+    // Eliminar de UI inmediatamente
+    optimisticDelete(idEliminar);
+    toast.success("Usuario eliminado correctamente");
+    setMostrarConfirm(false);
+    setUsuarioEliminar(null);
+
     try {
-      const res = await fetch(`/api/usuarios/${usuarioEliminar.id}`, {
+      const res = await fetch(`/api/usuarios/${idEliminar}`, {
         method: "DELETE",
       });
-      if (res.ok) {
+
+      if (!res.ok) {
+        // Si falla, revertir
+        toast.error("Error al eliminar el usuario");
         recargarUsuarios();
-        toast.success("Usuario eliminado correctamente");
-        setMostrarConfirm(false);
-        setUsuarioEliminar(null);
       }
     } catch (error) {
       console.error("Error al eliminar:", error);

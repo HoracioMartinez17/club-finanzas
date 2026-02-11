@@ -323,44 +323,43 @@ export default function AdminDashboard() {
       y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : y + 15;
     }
 
-    // Avisos Importantes - SIEMPRE en nueva página si hay deudas o si está muy bajo
-    if (deudas.length > 0 || y > 220) {
-      doc.addPage();
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, 210, 297, "F");
-      doc.setTextColor(15, 23, 42);
-      y = 20;
-    } else {
+    // Avisos Importantes - SOLO si hay deudas pendientes
+    const deudasPendientes = deudas.filter((d) => d.montoRestante > 0);
+
+    if (deudasPendientes.length > 0) {
+      if (deudas.length > 0 || y > 220) {
+        doc.addPage();
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, 210, 297, "F");
+        doc.setTextColor(15, 23, 42);
+        y = 20;
+      } else {
+        y += 15;
+      }
+
+      doc.setFontSize(18);
+      doc.text("AVISOS IMPORTANTES", 20, y);
       y += 15;
-    }
 
-    doc.setFontSize(18);
-    doc.text("AVISOS IMPORTANTES", 20, y);
-    y += 15;
-
-    doc.setFontSize(10);
-    if (diferencia < 0) {
-      doc.text("! Hay que apretar gastos para el siguiente ciclo.", 20, y);
-      y += 8;
-    }
-    if (stats.balance < 500) {
-      doc.text("! El saldo esta bajo, considerar revisar gastos.", 20, y);
-      y += 8;
-    }
-    if (stats.aportesComprometidos > 0) {
+      doc.setFontSize(10);
+      if (diferencia < 0) {
+        doc.text("! Hay que apretar gastos para el siguiente ciclo.", 20, y);
+        y += 8;
+      }
+      if (stats.balance < 500) {
+        doc.text("! El saldo esta bajo, considerar revisar gastos.", 20, y);
+        y += 8;
+      }
+      if (stats.aportesComprometidos > 0) {
+        doc.text(
+          `Hay ${formatCurrencyFull(stats.aportesComprometidos)} en aportes pendientes de cobro.`,
+          20,
+          y,
+        );
+        y += 8;
+      }
       doc.text(
-        `Hay ${formatCurrencyFull(stats.aportesComprometidos)} en aportes pendientes de cobro.`,
-        20,
-        y,
-      );
-      y += 8;
-    }
-    if (colectasCerradas.length === 0) {
-      doc.text("No hay colaboraciones cerradas en este periodo.", 20, y);
-      y += 8;
-    } else {
-      doc.text(
-        `${colectasCerradas.length} colaboración(es) cerrada(s) completada(s).`,
+        `! El club tiene ${deudasPendientes.length} deuda(s) pendiente(s) por Gs. ${deudasPendientes.reduce((sum, d) => sum + d.montoRestante, 0).toLocaleString()}.`,
         20,
         y,
       );
