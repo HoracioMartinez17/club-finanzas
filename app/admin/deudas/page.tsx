@@ -27,6 +27,14 @@ interface Deuda {
   estado: string;
   fecha: string;
   notas?: string;
+  pagos?: PagoDeuda[];
+}
+
+interface PagoDeuda {
+  id: string;
+  cantidad: number;
+  fecha: string;
+  notas?: string;
 }
 
 interface Miembro {
@@ -62,7 +70,9 @@ export default function AdminDeudas() {
   const [miembros, setMiembros] = useState<Miembro[]>([]);
   const [nuevaDeuda, setNuevaDeuda] = useState({
     miembroId: "",
-    concepto: "otro",
+    miembroNombre: "",
+    tipoDeuda: "miembro", // "miembro" o "general"
+    concepto: "préstamo",
     conceptoPersonalizado: "",
     montoOriginal: 0,
     notas: "",
@@ -111,7 +121,7 @@ export default function AdminDeudas() {
         const data = await res.json();
         const deudasTransformadas = data.map((d: any) => ({
           id: d.id,
-          miembroNombre: d.miembro?.nombre || "N/A",
+          miembroNombre: d.miembro?.nombre || d.miembroNombre || "N/A",
           concepto: d.concepto || "N/A",
           montoOriginal: d.montoOriginal,
           montoPagado: d.montoPagado,
@@ -132,9 +142,26 @@ export default function AdminDeudas() {
     }
   };
 
-  const handleEdit = (deuda: Deuda) => {
-    setDeudaEditando(deuda);
-    setModalEditarAbierto(true);
+  const handleEdit = async (deuda: Deuda) => {
+    try {
+      // Obtener detalles completos de la deuda incluyendo pagos
+      const res = await fetch(`/api/deudas/${deuda.id}`);
+      if (res.ok) {
+        const deudaCompleta = await res.json();
+        // Transformar a formato compatible
+        const deudaTransformada = {
+          ...deuda,
+          pagos: deudaCompleta.pagos || [],
+        };
+        setDeudaEditando(deudaTransformada);
+        setModalEditarAbierto(true);
+      }
+    } catch (error) {
+      console.error("Error cargando deuda:", error);
+      // Fallback: abrir con datos disponibles
+      setDeudaEditando(deuda);
+      setModalEditarAbierto(true);
+    }
   };
 
   const handleDelete = async (deuda: Deuda) => {
@@ -177,7 +204,9 @@ export default function AdminDeudas() {
     }
 
     const deudasAnteriores = [...deudas];
+    const deudaOriginal = deudas.find((d) => d.id === deudaEditando.id);
 
+    // CAMBIO OPTIMISTA: Actualizar la UI inmediatamente
     setDeudas(
       deudas.map((d) =>
         d.id === deudaEditando.id
@@ -186,37 +215,84 @@ export default function AdminDeudas() {
               montoOriginal: deudaEditando.montoOriginal,
               concepto: deudaEditando.concepto,
               notas: deudaEditando.notas,
+              montoPagado: deudaEditando.montoPagado,
+              montoRestante: deudaEditando.montoRestante,
+              estado: deudaEditando.estado,
             }
           : d,
       ),
     );
 
-    cerrarModalEditar();
     toast.success("Deuda actualizada correctamente");
+    cerrarModalEditar();
 
     setGuardando(true);
-    try {
-      const res = await fetch(`/api/deudas/${deudaEditando.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          concepto: deudaEditando.concepto,
-          montoOriginal: deudaEditando.montoOriginal,
-          notas: deudaEditando.notas,
-        }),
-      });
 
-      if (!res.ok) {
-        setDeudas(deudasAnteriores);
-        const error = await res.json();
-        toast.error(
-          error.error || "Error al actualizar la deuda. Se revirtieron los cambios.",
-        );
+    try {
+      // Determinar si es un pago completo
+      const montoRestante = deudaEditando.montoOriginal - deudaEditando.montoPagado;
+      const esDeudaCompletada =
+        deudaEditando.montoPagado > 0 &&
+        montoRestante === 0 &&
+        deudaEditando.montoPagado !== deudaOriginal?.montoPagado;
+
+      // Si es un pago completo (mediante el checkbox), registrar el pago
+      if (esDeudaCompletada) {
+        const montoARegistrar =
+          montoRestante === 0
+            ? deudaEditando.montoRestante
+            : deudaEditando.montoPagado - (deudaOriginal?.montoPagado || 0);
+
+        if (montoARegistrar > 0) {
+          const resPago = await fetch(`/api/deudas/${deudaEditando.id}/pago`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              cantidad: montoARegistrar,
+              notas: "Pago completo",
+            }),
+          });
+
+          if (!resPago.ok) {
+            const error = await resPago.json();
+            toast.error(error.error || "Error al registrar el pago");
+            // REVERTIR: Restaurar valores anteriores
+            setDeudas(deudasAnteriores);
+            setGuardando(false);
+            return;
+          }
+        }
+      } else {
+        // Solo actualizar datos básicos de la deuda
+        const res = await fetch(`/api/deudas/${deudaEditando.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            concepto: deudaEditando.concepto,
+            montoOriginal: deudaEditando.montoOriginal,
+            notas: deudaEditando.notas,
+          }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          toast.error(
+            error.error || "Error al actualizar la deuda. Se revirtieron los cambios.",
+          );
+          // REVERTIR: Restaurar valores anteriores
+          setDeudas(deudasAnteriores);
+          setGuardando(false);
+          return;
+        }
       }
+
+      // Recargar deudas del servidor para sincronizar
+      cargarDeudas();
     } catch (error) {
-      setDeudas(deudasAnteriores);
       console.error("Error:", error);
       toast.error("Error de conexión. Se revirtieron los cambios.");
+      // REVERTIR: Restaurar valores anteriores
+      setDeudas(deudasAnteriores);
     } finally {
       setGuardando(false);
     }
@@ -230,7 +306,9 @@ export default function AdminDeudas() {
   const abrirModalNuevo = () => {
     setNuevaDeuda({
       miembroId: "",
-      concepto: "otro",
+      miembroNombre: "",
+      tipoDeuda: "miembro",
+      concepto: "préstamo",
       conceptoPersonalizado: "",
       montoOriginal: 0,
       notas: "",
@@ -242,7 +320,9 @@ export default function AdminDeudas() {
     setModalNuevoAbierto(false);
     setNuevaDeuda({
       miembroId: "",
-      concepto: "otro",
+      miembroNombre: "",
+      tipoDeuda: "miembro",
+      concepto: "préstamo",
       conceptoPersonalizado: "",
       montoOriginal: 0,
       notas: "",
@@ -250,11 +330,6 @@ export default function AdminDeudas() {
   };
 
   const crearDeuda = async () => {
-    if (!nuevaDeuda.miembroId) {
-      toast.error("Debes seleccionar un miembro");
-      return;
-    }
-
     if (!nuevaDeuda.concepto) {
       toast.error("Debes seleccionar un concepto");
       return;
@@ -271,6 +346,17 @@ export default function AdminDeudas() {
       return;
     }
 
+    // Validar según el tipo de deuda
+    if (nuevaDeuda.tipoDeuda === "miembro" && !nuevaDeuda.miembroId) {
+      toast.error("Debes seleccionar un miembro");
+      return;
+    }
+
+    if (nuevaDeuda.tipoDeuda === "general" && !nuevaDeuda.miembroNombre.trim()) {
+      toast.error("Especifica a quién se le debe dinero (ej: Cuerpo técnico, Jugadores)");
+      return;
+    }
+
     setGuardando(true);
     try {
       // Usar concepto personalizado si es "otro"
@@ -283,7 +369,9 @@ export default function AdminDeudas() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          miembroId: nuevaDeuda.miembroId,
+          miembroId: nuevaDeuda.tipoDeuda === "miembro" ? nuevaDeuda.miembroId : null,
+          miembroNombre:
+            nuevaDeuda.tipoDeuda === "general" ? nuevaDeuda.miembroNombre : null,
           concepto: conceptoFinal,
           montoOriginal: nuevaDeuda.montoOriginal,
           montoRestante: nuevaDeuda.montoOriginal,
@@ -844,6 +932,79 @@ export default function AdminDeudas() {
                   />
                 </div>
 
+                {/* Historial de Pagos */}
+                {deudaEditando.pagos && deudaEditando.pagos.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Historial de Pagos
+                    </label>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {deudaEditando.pagos.map((pago) => (
+                        <div
+                          key={pago.id}
+                          className="p-3 bg-slate-900 border border-slate-700 rounded-lg text-sm"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-emerald-400">
+                              ₲{pago.cantidad.toLocaleString()}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {new Date(pago.fecha).toLocaleDateString("es-PY")}
+                            </span>
+                          </div>
+                          {pago.notas && (
+                            <p className="text-slate-300 text-xs italic">
+                              "{pago.notas}"
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Checkbox - Marcar como pagada */}
+                <div className="flex items-center gap-3 p-3 bg-slate-900 border border-slate-700 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="marcarPagada"
+                    checked={
+                      deudaEditando.montoPagado === deudaEditando.montoOriginal &&
+                      deudaEditando.montoOriginal > 0
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setDeudaEditando({
+                          ...deudaEditando,
+                          montoPagado: deudaEditando.montoOriginal,
+                          montoRestante: 0,
+                          estado: "pagada",
+                        });
+                      } else {
+                        setDeudaEditando({
+                          ...deudaEditando,
+                          montoPagado:
+                            deudas.find((d) => d.id === deudaEditando.id)?.montoPagado ||
+                            0,
+                          montoRestante:
+                            deudas.find((d) => d.id === deudaEditando.id)
+                              ?.montoRestante || 0,
+                          estado:
+                            deudas.find((d) => d.id === deudaEditando.id)?.estado ||
+                            "pendiente",
+                        });
+                      }
+                    }}
+                    className="w-4 h-4 accent-purple-500 cursor-pointer"
+                  />
+                  <label
+                    htmlFor="marcarPagada"
+                    className="text-sm text-slate-300 cursor-pointer select-none"
+                  >
+                    Marcar como pagada completamente
+                  </label>
+                </div>
+
                 {/* Botones */}
                 <div className="flex gap-3 pt-4">
                   <button
@@ -901,29 +1062,95 @@ export default function AdminDeudas() {
               </div>
 
               <div className="space-y-4">
-                {/* Miembro */}
+                {/* Tipo de Deuda */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Miembro *
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Tipo de deuda *
                   </label>
-                  <select
-                    value={nuevaDeuda.miembroId}
-                    onChange={(e) =>
-                      setNuevaDeuda({
-                        ...nuevaDeuda,
-                        miembroId: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccionar miembro...</option>
-                    {miembros.map((miembro) => (
-                      <option key={miembro.id} value={miembro.id}>
-                        {miembro.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() =>
+                        setNuevaDeuda({
+                          ...nuevaDeuda,
+                          tipoDeuda: "miembro",
+                          miembroId: "",
+                          miembroNombre: "",
+                        })
+                      }
+                      className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+                        nuevaDeuda.tipoDeuda === "miembro"
+                          ? "bg-purple-500 text-white"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      De un miembro
+                    </button>
+                    <button
+                      onClick={() =>
+                        setNuevaDeuda({
+                          ...nuevaDeuda,
+                          tipoDeuda: "general",
+                          miembroId: "",
+                          miembroNombre: "",
+                        })
+                      }
+                      className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+                        nuevaDeuda.tipoDeuda === "general"
+                          ? "bg-purple-500 text-white"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      General
+                    </button>
+                  </div>
                 </div>
+
+                {/* Miembro (si es tipo miembro) */}
+                {nuevaDeuda.tipoDeuda === "miembro" && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Seleccionar miembro *
+                    </label>
+                    <select
+                      value={nuevaDeuda.miembroId}
+                      onChange={(e) =>
+                        setNuevaDeuda({
+                          ...nuevaDeuda,
+                          miembroId: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="">Seleccionar miembro...</option>
+                      {miembros.map((miembro) => (
+                        <option key={miembro.id} value={miembro.id}>
+                          {miembro.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Nombre de deuda general (si es tipo general) */}
+                {nuevaDeuda.tipoDeuda === "general" && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      A quién se le debe dinero *
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevaDeuda.miembroNombre}
+                      onChange={(e) =>
+                        setNuevaDeuda({
+                          ...nuevaDeuda,
+                          miembroNombre: e.target.value,
+                        })
+                      }
+                      placeholder="Ej: Cuerpo técnico, Jugadores, Proveedor X..."
+                      className="w-full px-3 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                )}
 
                 {/* Concepto */}
                 <div>

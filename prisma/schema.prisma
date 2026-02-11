@@ -120,8 +120,9 @@ model Ingreso {
 // Deudas del club hacia miembros
 model Deuda {
   id              String   @id @default(cuid())
-  miembro         Miembro  @relation(fields: [miembroId], references: [id], onDelete: Cascade)
-  miembroId       String
+  miembro         Miembro? @relation(fields: [miembroId], references: [id], onDelete: Cascade)
+  miembroId       String?
+  miembroNombre   String?  // Para deudas generales (sin miembro específico)
   concepto        String   // comidas, transporte, préstamo, compra de equipos, etc
   montoOriginal   Float    // Monto total de la deuda
   montoPagado     Float    @default(0) // Cuánto se ha pagado hasta ahora

@@ -40,6 +40,7 @@ interface DashboardStats {
   balance: number;
   aportesComprometidos: number;
   faltanteTotalColectas: number;
+  totalDeudas: number;
 }
 
 export default function AdminDashboard() {
@@ -53,6 +54,7 @@ export default function AdminDashboard() {
     balance: 0,
     aportesComprometidos: 0,
     faltanteTotalColectas: 0,
+    totalDeudas: 0,
   });
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState<"mes" | "año" | "todo">("todo");
@@ -141,6 +143,19 @@ export default function AdminDashboard() {
       colectaId?: string;
     };
 
+    type Deuda = {
+      id: string;
+      montoOriginal: number;
+      montoPagado: number;
+      montoRestante: number;
+      estado: string;
+      miembroNombre?: string;
+      concepto?: string;
+      miembro?: {
+        nombre: string;
+      };
+    };
+
     const normalizarFuente = (fuente?: string) => {
       if (!fuente) return "Sin fuente";
       return fuente === "Merchandising" ? "Productos del club" : fuente;
@@ -150,6 +165,7 @@ export default function AdminDashboard() {
     const gastos = await obtenerDatos<Gasto>("/api/gastos");
     const colectas = await obtenerDatos<Colecta>("/api/colectas");
     const aportes = await obtenerDatos<Aporte>("/api/colectas/aportes");
+    const deudas = await obtenerDatos<Deuda>("/api/deudas");
 
     // Filtrar solo colectas cerradas/completadas
     const colectasCerradas = colectas.filter(
@@ -222,6 +238,15 @@ export default function AdminDashboard() {
     doc.text((diferencia >= 0 ? "+" : "") + formatCurrencyFull(diferencia), 80, y);
     y += 10;
 
+    // Calcular total de deudas
+    const totalDeudado = deudas.reduce((sum, d) => sum + d.montoRestante, 0);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Deudas del Club:", 20, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(formatCurrencyFull(totalDeudado), 80, y);
+    y += 10;
+
     doc.setFont("helvetica", "bold");
     doc.text("Socios activos:", 20, y);
     doc.setFont("helvetica", "normal");
@@ -250,8 +275,44 @@ export default function AdminDashboard() {
       styles: { fontSize: 11 },
     });
 
-    // Avisos Importantes (al final del resumen ejecutivo)
+    // Sección de Deudas del Club (Desglose)
     y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 20 : y + 20;
+
+    // Solo mostrar sección de deudas si hay deudas
+    if (deudas.length > 0) {
+      doc.setFontSize(18);
+      doc.text("DEUDAS DEL CLUB - DESGLOSE", 20, y);
+      y += 15;
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Acreedor", "Concepto", "Original", "Pagado", "Pendiente", "Estado"]],
+        body: deudas.map((deuda) => [
+          deuda.miembro?.nombre || deuda.miembroNombre || "N/A",
+          deuda.concepto || "N/A",
+          formatCurrencyFull(deuda.montoOriginal),
+          formatCurrencyFull(deuda.montoPagado),
+          formatCurrencyFull(deuda.montoRestante),
+          deuda.estado,
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [15, 23, 42], textColor: [226, 232, 240], fontSize: 9 },
+        styles: { fontSize: 9 },
+      });
+
+      y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : y + 15;
+    }
+
+    // Avisos Importantes - SIEMPRE en nueva página si hay deudas o si está muy bajo
+    if (deudas.length > 0 || y > 220) {
+      doc.addPage();
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, 210, 297, "F");
+      doc.setTextColor(15, 23, 42);
+      y = 20;
+    } else {
+      y += 15;
+    }
 
     doc.setFontSize(18);
     doc.text("AVISOS IMPORTANTES", 20, y);
@@ -565,27 +626,36 @@ export default function AdminDashboard() {
       try {
         // Intentar cargar datos reales
         try {
-          const [colectasRes, miembrosRes, aportesRes, gastosRes, ingresosRes] =
-            await Promise.all([
-              fetch("/api/colectas"),
-              fetch("/api/miembros"),
-              fetch("/api/colectas/aportes"),
-              fetch("/api/gastos"),
-              fetch("/api/ingresos"),
-            ]);
+          const [
+            colectasRes,
+            miembrosRes,
+            aportesRes,
+            gastosRes,
+            ingresosRes,
+            deudasRes,
+          ] = await Promise.all([
+            fetch("/api/colectas"),
+            fetch("/api/miembros"),
+            fetch("/api/colectas/aportes"),
+            fetch("/api/gastos"),
+            fetch("/api/ingresos"),
+            fetch("/api/deudas"),
+          ]);
 
           if (
             colectasRes.ok &&
             miembrosRes.ok &&
             aportesRes.ok &&
             gastosRes.ok &&
-            ingresosRes.ok
+            ingresosRes.ok &&
+            deudasRes.ok
           ) {
             const colectas = await colectasRes.json();
             const miembros = await miembrosRes.json();
             const aportes = await aportesRes.json();
             const gastos = await gastosRes.json();
             const ingresos = await ingresosRes.json();
+            const deudas = await deudasRes.json();
 
             const totalAportado = aportes
               .filter((a: any) => a.estado === "aportado")
@@ -614,6 +684,11 @@ export default function AdminDashboard() {
               0,
             );
 
+            const totalDeudas = deudas.reduce(
+              (sum: number, d: any) => sum + (d.montoRestante || 0),
+              0,
+            );
+
             setStats({
               totalColectas: colectas.length,
               colectasActivas: colectasActivas.length,
@@ -624,6 +699,7 @@ export default function AdminDashboard() {
               balance: totalAportado + totalIngresos - totalGastado,
               aportesComprometidos,
               faltanteTotalColectas,
+              totalDeudas,
             });
             return;
           }
@@ -642,6 +718,7 @@ export default function AdminDashboard() {
           balance: 2100,
           aportesComprometidos: 500,
           faltanteTotalColectas: 1200,
+          totalDeudas: 0,
         });
       } catch (error) {
         console.error("Error cargando estadísticas:", error);
@@ -853,14 +930,17 @@ export default function AdminDashboard() {
             <div className="mt-4 space-y-4">
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-300">Colectas en marcha</span>
-                  <span className="text-slate-100 font-semibold">
-                    {stats.colectasActivas}/{stats.totalColectas}
+                  <span className="text-slate-300">Dinero que debemos</span>
+                  <span
+                    className={`text-slate-100 font-semibold ${stats.totalDeudas > 0 ? "text-red-300" : "text-emerald-300"}`}
+                  >
+                    {formatCurrency(stats.totalDeudas)}
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-slate-400">
-                  Falta juntar {formatCurrency(stats.faltanteTotalColectas)} para cerrar
-                  las colectas.
+                  {stats.totalDeudas > 0
+                    ? "El club debe este monto en deudas pendientes."
+                    : "No hay deudas pendientes de pago."}
                 </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
@@ -1083,11 +1163,15 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/70 p-3">
               <div className="flex items-center gap-2 text-sm">
-                <FiTrendingUp className="text-emerald-300" />
-                Colectas en marcha
+                <FiAlertCircle
+                  className={stats.totalDeudas > 0 ? "text-red-300" : "text-emerald-300"}
+                />
+                Dinero que debemos
               </div>
-              <span className="text-slate-100 font-semibold">
-                {stats.colectasActivas}/{stats.totalColectas}
+              <span
+                className={`text-slate-100 font-semibold ${stats.totalDeudas > 0 ? "text-red-300" : "text-emerald-300"}`}
+              >
+                {formatCurrency(stats.totalDeudas)}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/70 p-3">

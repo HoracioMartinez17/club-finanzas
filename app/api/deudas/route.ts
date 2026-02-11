@@ -22,10 +22,11 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { miembroId, concepto, montoOriginal, montoRestante, notas } = await req.json();
+    const { miembroId, miembroNombre, concepto, montoOriginal, montoRestante, notas } =
+      await req.json();
 
     // Validaciones
-    if (!miembroId || !concepto || !montoOriginal) {
+    if (!concepto || !montoOriginal) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
     }
 
@@ -33,19 +34,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "El monto debe ser mayor a 0" }, { status: 400 });
     }
 
-    // Verificar que el miembro existe
-    const miembro = await prisma.miembro.findUnique({
-      where: { id: miembroId },
-    });
+    // Validar que tenga miembroId O miembroNombre
+    if (!miembroId && !miembroNombre) {
+      return NextResponse.json(
+        { error: "Debes seleccionar un miembro o especificar a quién se le debe" },
+        { status: 400 },
+      );
+    }
 
-    if (!miembro) {
-      return NextResponse.json({ error: "El miembro no existe" }, { status: 404 });
+    // Si es un miembro específico, validar que exista
+    let miembroValidado = null;
+    if (miembroId) {
+      miembroValidado = await prisma.miembro.findUnique({
+        where: { id: miembroId },
+      });
+
+      if (!miembroValidado) {
+        return NextResponse.json({ error: "El miembro no existe" }, { status: 404 });
+      }
     }
 
     // Crear la deuda
     const deuda = await prisma.deuda.create({
       data: {
-        miembroId,
+        miembroId: miembroId || null,
+        miembroNombre: miembroNombre || miembroValidado?.nombre || null,
         concepto,
         montoOriginal,
         montoPagado: 0,
