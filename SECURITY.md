@@ -41,7 +41,7 @@ The `.gitignore` file protects this automatically.
 
 ```typescript
 // BAD - Never do this
-const password = "***REMOVED***";
+const password = "Secure@Admin2024!";
 ```
 
 ❌ **Don't**: Commit `.env` files to git

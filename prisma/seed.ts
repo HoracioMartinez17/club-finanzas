@@ -31,15 +31,20 @@ async function main() {
 
   console.log("📝 Creando usuarios (Directiva)...");
 
-  // Test credentials - these should be changed immediately after first login in production
-  const adminPassword = await bcrypt.hash(
-    process.env.TEST_ADMIN_PASSWORD || "***REMOVED***",
-    10,
-  );
-  const tesoreroPassword = await bcrypt.hash(
-    process.env.TEST_TESORERO_PASSWORD || "***REMOVED***",
-    10,
-  );
+  // Test credentials - MUST be defined in .env
+  if (!process.env.TEST_ADMIN_PASSWORD) {
+    throw new Error(
+      "❌ TEST_ADMIN_PASSWORD not defined in .env - required for seed script",
+    );
+  }
+  if (!process.env.TEST_TESORERO_PASSWORD) {
+    throw new Error(
+      "❌ TEST_TESORERO_PASSWORD not defined in .env - required for seed script",
+    );
+  }
+
+  const adminPassword = await bcrypt.hash(process.env.TEST_ADMIN_PASSWORD, 10);
+  const tesoreroPassword = await bcrypt.hash(process.env.TEST_TESORERO_PASSWORD, 10);
 
   const users = await Promise.all([
     prisma.user.create({
@@ -444,9 +449,8 @@ async function main() {
   console.log("👤 Usuarios de prueba creados:");
   console.log("  - admin@club.com");
   console.log("  - tesorero@club.com");
-  console.log("⚠️  Cambia las contraseñas inmediatamente después del primer acceso.");
   console.log(
-    "💡 Define TEST_ADMIN_PASSWORD y TEST_TESORERO_PASSWORD en .env para personalizarlas.",
+    "⚠️  Define TEST_ADMIN_PASSWORD y TEST_TESORERO_PASSWORD en .env antes de ejecutar seed.",
   );
 }
 
