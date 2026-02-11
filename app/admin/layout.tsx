@@ -14,6 +14,7 @@ import {
   FiSettings,
   FiTrendingDown,
   FiPackage,
+  FiAlertCircle,
 } from "react-icons/fi";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -107,6 +108,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             href="/admin/gastos"
             icon={<FiTrendingDown />}
             label="Gastos"
+            open={sidebarOpen}
+          />
+          <NavLink
+            href="/admin/deudas"
+            icon={<FiAlertCircle />}
+            label="Deudas"
             open={sidebarOpen}
           />
           <NavLink
