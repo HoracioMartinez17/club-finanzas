@@ -151,9 +151,15 @@ export default function AdminDashboard() {
       estado: string;
       miembroNombre?: string;
       concepto?: string;
+      fecha?: string | Date;
       miembro?: {
         nombre: string;
       };
+      pagos?: Array<{
+        id: string;
+        fecha: string | Date;
+        cantidad: number;
+      }>;
     };
 
     const normalizarFuente = (fuente?: string) => {
@@ -286,18 +292,32 @@ export default function AdminDashboard() {
 
       autoTable(doc, {
         startY: y,
-        head: [["Acreedor", "Concepto", "Original", "Pagado", "Pendiente", "Estado"]],
-        body: deudas.map((deuda) => [
-          deuda.miembro?.nombre || deuda.miembroNombre || "N/A",
-          deuda.concepto || "N/A",
-          formatCurrencyFull(deuda.montoOriginal),
-          formatCurrencyFull(deuda.montoPagado),
-          formatCurrencyFull(deuda.montoRestante),
-          deuda.estado,
-        ]),
+        head: [
+          ["Acreedor", "Concepto", "Original", "Pagado", "Pendiente", "Último Pago"],
+        ],
+        body: deudas.map((deuda) => {
+          // Calcular fecha del último pago
+          let fechaMostrar = "Sin pagos";
+          if (deuda.pagos && deuda.pagos.length > 0) {
+            // Ordenar pagos por fecha descendente y obtener el más reciente
+            const pagosOrdenados = [...deuda.pagos].sort(
+              (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+            );
+            fechaMostrar = new Date(pagosOrdenados[0].fecha).toLocaleDateString("es-PY");
+          }
+
+          return [
+            deuda.miembro?.nombre || deuda.miembroNombre || "N/A",
+            deuda.concepto || "N/A",
+            formatCurrencyFull(deuda.montoOriginal),
+            formatCurrencyFull(deuda.montoPagado),
+            formatCurrencyFull(deuda.montoRestante),
+            fechaMostrar,
+          ];
+        }),
         theme: "grid",
-        headStyles: { fillColor: [15, 23, 42], textColor: [226, 232, 240], fontSize: 9 },
-        styles: { fontSize: 9 },
+        headStyles: { fillColor: [15, 23, 42], textColor: [226, 232, 240], fontSize: 10 },
+        styles: { fontSize: 10 },
       });
 
       y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : y + 15;

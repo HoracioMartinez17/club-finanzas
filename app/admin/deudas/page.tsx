@@ -505,36 +505,25 @@ export default function AdminDeudas() {
     doc.text(`Total de deudas: ${deudasFiltradas.length}`, 95, 28);
 
     doc.text(
-      `Monto total adeudado: ₲${estadisticas.totalAdeudado.toLocaleString()}`,
+      `Monto total adeudado: Gs. ${estadisticas.totalAdeudado.toLocaleString()}`,
       15,
       35,
     );
     doc.text(
-      `Monto total pagado: ₲${estadisticas.totalTransferencias.toLocaleString()}`,
+      `Monto total pagado: Gs. ${estadisticas.totalTransferencias.toLocaleString()}`,
       95,
       35,
     );
 
     autoTable(doc, {
       startY: 45,
-      head: [
-        [
-          "Miembro",
-          "Concepto",
-          "Monto Original",
-          "Pagado",
-          "Restante",
-          "Estado",
-          "Fecha",
-        ],
-      ],
+      head: [["Miembro", "Concepto", "Monto Original", "Pagado", "Restante", "Fecha"]],
       body: deudasFiltradas.map((d) => [
         d.miembroNombre,
         d.concepto,
-        `₲${d.montoOriginal.toLocaleString()}`,
-        `₲${d.montoPagado.toLocaleString()}`,
-        `₲${d.montoRestante.toLocaleString()}`,
-        d.estado,
+        `Gs. ${d.montoOriginal.toLocaleString()}`,
+        `Gs. ${d.montoPagado.toLocaleString()}`,
+        `Gs. ${d.montoRestante.toLocaleString()}`,
         d.fecha,
       ]),
       styles: {
