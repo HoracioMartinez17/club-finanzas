@@ -40,6 +40,7 @@ const CONCEPTOS = [
   "comidas",
   "transporte",
   "préstamo",
+  "jugadores",
   "compra de equipos",
   "otro",
 ];
