@@ -17,11 +17,13 @@ CREDENCIALES.md               # Hardcoded credentials documentation
 ## 📝 How to Use Environment Variables
 
 ### 1. Copy the Example File
+
 ```bash
 cp .env.example .env.local
 ```
 
 ### 2. Edit .env.local with Your Secrets
+
 ```bash
 # Replace placeholder values with actual credentials
 DATABASE_URL="your-actual-db-url"
@@ -30,29 +32,34 @@ AUTH_SECRET="your-secure-random-secret"
 ```
 
 ### 3. Never Commit .env.local
+
 The `.gitignore` file protects this automatically.
 
 ## ⚠️ What NOT to Do
 
 ❌ **Don't**: Hardcode passwords in source code
+
 ```typescript
 // BAD - Never do this
 const password = "***REMOVED***";
 ```
 
 ❌ **Don't**: Commit `.env` files to git
+
 ```bash
 # This will be rejected by .gitignore
 git add .env.local
 ```
 
 ❌ **Don't**: Put real database credentials in seed files
+
 ```typescript
 // BAD - Don't use hardcoded credentials as defaults
 const dbUrl = process.env.DATABASE_URL || "postgresql://user:pass@host:5432/db";
 ```
 
 ✅ **Do**: Use environment variables with secure defaults
+
 ```typescript
 // GOOD - Use env vars, fail loudly if not set
 const dbUrl = process.env.DATABASE_URL;
@@ -62,18 +69,22 @@ if (!dbUrl) throw new Error("DATABASE_URL is required");
 ## 🔒 Sensitive Data Locations
 
 ### Database Credentials
+
 - **Safe**: In `.env.local` (ignored by git)
 - **Unsafe**: In code or committed files
 
 ### API Keys
+
 - **Safe**: In `.env.local` environment variables
 - **Unsafe**: Hardcoded in files, committed CREDENCIALES.md
 
 ### Test/Demo Credentials
+
 - **Safe**: In `.env` as environment variable defaults
 - **Unsafe**: Hardcoded in `prisma/seed.ts`
 
 ### Secrets for Production
+
 - **Safe**: In CI/CD secrets (GitHub Actions, Vercel, etc.)
 - **Unsafe**: In `.env.production.local` on development machines
 

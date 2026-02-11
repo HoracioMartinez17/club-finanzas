@@ -59,3 +59,7 @@ CREDENCIALES.md
 # OS
 .DS_Store
 Thumbs.db
+# Scripts de configuración (privados por usuario)
+.env.example
+prisma/create-super-admin.ts
+prisma/create-test-club.ts
