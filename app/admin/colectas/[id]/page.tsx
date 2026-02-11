@@ -63,6 +63,7 @@ export default function DetalleColecta() {
   const params = useParams();
   const router = useRouter();
   const colectaId = params.id as string;
+  const [clubSlug, setClubSlug] = useState<string | null>(null);
 
   const [colecta, setColecta] = useState<Colecta | null>(null);
   const [aportes, setAportes] = useState<Aporte[]>([]);
@@ -136,7 +137,21 @@ export default function DetalleColecta() {
   useEffect(() => {
     cargarDatos();
     cargarMiembros();
+    cargarClub();
   }, [colectaId]);
+
+  const cargarClub = async () => {
+    try {
+      const res = await fetch("/api/club");
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json();
+      setClubSlug(data.slug || null);
+    } catch (error) {
+      console.error("Error cargando club:", error);
+    }
+  };
 
   const cargarMiembros = async () => {
     try {
@@ -608,7 +623,10 @@ export default function DetalleColecta() {
   };
 
   const copiarLink = () => {
-    const url = `${window.location.origin}/colectas/${colectaId}`;
+    const base = `${window.location.origin}`;
+    const url = clubSlug
+      ? `${base}/${clubSlug}/colectas/${colectaId}`
+      : `${base}/colectas/${colectaId}`;
     navigator.clipboard.writeText(url);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);

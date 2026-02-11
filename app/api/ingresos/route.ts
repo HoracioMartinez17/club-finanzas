@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const fuente = searchParams.get("fuente");
 
     const ingresos = await prisma.ingreso.findMany({
       where: {
+        clubId,
         ...(fuente && { fuente }),
       },
       include: {
@@ -27,6 +35,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubIdFromToken = payload?.clubId;
+    if (!clubIdFromToken) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { concepto, cantidad, fuente, miembroId, fecha } = await req.json();
 
     if (!concepto || !cantidad || !fuente) {
@@ -37,6 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Si se especifica un miembro, verificar que existe
+    let clubId: string = clubIdFromToken;
     if (miembroId) {
       const miembro = await prisma.miembro.findUnique({
         where: { id: miembroId },
@@ -45,6 +60,10 @@ export async function POST(req: NextRequest) {
       if (!miembro) {
         return NextResponse.json({ error: "Miembro no encontrado" }, { status: 404 });
       }
+      if (miembro.clubId !== clubIdFromToken) {
+        return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+      }
+      clubId = miembro.clubId;
     }
 
     const ingreso = await prisma.ingreso.create({
@@ -54,6 +73,7 @@ export async function POST(req: NextRequest) {
         fuente,
         miembroId: miembroId || null,
         fecha: fecha ? new Date(fecha) : new Date(),
+        clubId,
       },
       include: {
         miembro: true,

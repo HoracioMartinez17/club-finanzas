@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const deudas = await prisma.deuda.findMany({
+      where: { clubId },
       include: {
         miembro: true,
         pagos: true,
@@ -22,6 +30,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { miembroId, miembroNombre, concepto, montoOriginal, montoRestante, notas } =
       await req.json();
 
@@ -52,6 +66,9 @@ export async function POST(req: NextRequest) {
       if (!miembroValidado) {
         return NextResponse.json({ error: "El miembro no existe" }, { status: 404 });
       }
+      if (miembroValidado.clubId !== clubId) {
+        return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+      }
     }
 
     // Crear la deuda
@@ -65,6 +82,7 @@ export async function POST(req: NextRequest) {
         montoRestante: montoRestante || montoOriginal,
         estado: "pendiente",
         notas: notas || null,
+        clubId,
       },
       include: {
         miembro: true,

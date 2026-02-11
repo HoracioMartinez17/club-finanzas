@@ -17,7 +17,46 @@ import {
   FiAlertCircle,
 } from "react-icons/fi";
 
+const ensureAuthFetch = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const guard = window as typeof window & { __authFetchPatched?: boolean };
+  if (guard.__authFetchPatched) {
+    return;
+  }
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input.toString();
+    const isApiRequest = url.startsWith("/api/");
+    const activeClubId = sessionStorage.getItem("active_admin_clubId");
+    const authToken = activeClubId
+      ? localStorage.getItem(`token_admin_${activeClubId}`)
+      : localStorage.getItem("token_admin");
+
+    if (!isApiRequest || !authToken) {
+      return originalFetch(input, init);
+    }
+
+    const headers = new Headers(init?.headers);
+    if (!headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${authToken}`);
+    }
+
+    if (input instanceof Request) {
+      return originalFetch(new Request(input, { ...init, headers }));
+    }
+
+    return originalFetch(input, { ...init, headers });
+  };
+
+  guard.__authFetchPatched = true;
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  ensureAuthFetch();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -27,7 +66,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Verificar si el usuario está autenticado y es admin
     const verificarAuth = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const activeClubId = sessionStorage.getItem("active_admin_clubId");
+        const token = activeClubId
+          ? localStorage.getItem(`token_admin_${activeClubId}`)
+          : localStorage.getItem("token_admin");
         if (!token) {
           router.push("/login");
           return;
@@ -45,8 +87,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     verificarAuth();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
+  const handleLogout = async () => {
+    const activeClubId = sessionStorage.getItem("active_admin_clubId");
+    const query = activeClubId ? `?role=admin&clubId=${activeClubId}` : "?role=admin";
+    try {
+      await fetch(`/api/auth/logout${query}`, { method: "POST" });
+    } catch (error) {
+      console.error("Error cerrando sesión:", error);
+    }
+
+    if (activeClubId) {
+      localStorage.removeItem(`token_admin_${activeClubId}`);
+    }
+    localStorage.removeItem("token_admin");
+    sessionStorage.removeItem("active_admin_clubId");
     router.push("/login");
   };
 

@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const colecta = await prisma.colecta.findUnique({
-      where: { id },
+    const colecta = await prisma.colecta.findFirst({
+      where: { id, clubId },
       include: {
         aportes: {
           include: {
@@ -70,11 +77,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
     const { nombre, descripcion, objetivo, estado, fechaCierre } = await req.json();
 
-    const colecta = await prisma.colecta.findUnique({
-      where: { id },
+    const colecta = await prisma.colecta.findFirst({
+      where: { id, clubId },
     });
 
     if (!colecta) {
@@ -107,9 +120,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const colecta = await prisma.colecta.findUnique({
-      where: { id },
+    const colecta = await prisma.colecta.findFirst({
+      where: { id, clubId },
     });
 
     if (!colecta) {

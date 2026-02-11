@@ -231,6 +231,9 @@ export default function AdminDeudas() {
     try {
       // Determinar si es un pago completo
       const montoRestante = deudaEditando.montoOriginal - deudaEditando.montoPagado;
+      const montoRestanteOriginal = deudaOriginal
+        ? deudaOriginal.montoOriginal - deudaOriginal.montoPagado
+        : deudaEditando.montoRestante;
       const esDeudaCompletada =
         deudaEditando.montoPagado > 0 &&
         montoRestante === 0 &&
@@ -238,10 +241,7 @@ export default function AdminDeudas() {
 
       // Si es un pago completo (mediante el checkbox), registrar el pago
       if (esDeudaCompletada) {
-        const montoARegistrar =
-          montoRestante === 0
-            ? deudaEditando.montoRestante
-            : deudaEditando.montoPagado - (deudaOriginal?.montoPagado || 0);
+        const montoARegistrar = montoRestanteOriginal;
 
         if (montoARegistrar > 0) {
           const resPago = await fetch(`/api/deudas/${deudaEditando.id}/pago`, {

@@ -12,6 +12,22 @@ async function main() {
   await prisma.miembro.deleteMany();
   await prisma.user.deleteMany();
   await prisma.config.deleteMany();
+  await prisma.club.deleteMany();
+
+  console.log("🏟️ Creando club por defecto...");
+
+  const defaultClub = await prisma.club.create({
+    data: {
+      nombre: "Club de Fútbol Local",
+      slug: "club-local",
+      activo: true,
+      planId: "free",
+      logoUrl: null,
+      createdBy: null,
+    },
+  });
+
+  const clubData = { clubId: defaultClub.id };
 
   console.log("📝 Creando usuarios (Directiva)...");
 

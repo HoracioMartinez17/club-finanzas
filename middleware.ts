@@ -25,7 +25,12 @@ export function middleware(request: NextRequest) {
 
   // Proteger rutas de admin
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    const token = request.cookies.get("token")?.value;
+    const cookieToken = request.cookies.get("token")?.value;
+    const adminToken = request.cookies.get("token_admin")?.value;
+    const adminScopedToken = request.cookies
+      .getAll()
+      .find((cookie) => cookie.name.startsWith("token_admin_"))?.value;
+    const token = adminToken || adminScopedToken || cookieToken;
 
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url));

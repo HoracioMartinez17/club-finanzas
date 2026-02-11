@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const estado = searchParams.get("estado");
 
     const colectas = await prisma.colecta.findMany({
-      where: estado ? { estado } : {},
+      where: {
+        clubId,
+        ...(estado && { estado }),
+      },
       include: {
         aportes: true,
         gastos: true,
@@ -56,6 +66,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { nombre, descripcion, objetivo, fechaCierre } = await req.json();
 
     if (!nombre || !objetivo) {
@@ -71,6 +87,7 @@ export async function POST(req: NextRequest) {
         descripcion,
         objetivo: parseFloat(objetivo),
         fechaCierre: fechaCierre ? new Date(fechaCierre) : null,
+        clubId,
       },
     });
 

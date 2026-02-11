@@ -78,9 +78,16 @@ export default function ColectaPublica() {
   useEffect(() => {
     const cargarColecta = async () => {
       try {
+        const activeClubId = sessionStorage.getItem("active_admin_clubId");
+        const token =
+          (activeClubId
+            ? localStorage.getItem(`token_admin_${activeClubId}`)
+            : localStorage.getItem("token_admin")) ||
+          localStorage.getItem("token_superadmin");
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
         const [colectaRes, aportesRes] = await Promise.all([
-          fetch(`/api/colectas/${id}`),
-          fetch(`/api/colectas/${id}/aportes`),
+          fetch(`/api/colectas/${id}`, { headers }),
+          fetch(`/api/colectas/${id}/aportes`, { headers }),
         ]);
 
         if (colectaRes.ok) {

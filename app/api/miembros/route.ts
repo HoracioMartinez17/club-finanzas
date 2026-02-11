@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const miembros = await prisma.miembro.findMany({
+      where: { clubId },
       include: {
         aportes: true,
         gastosRealizados: true,
@@ -48,6 +56,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { nombre, email, telefono, estado, deudaCuota } = await req.json();
 
     if (!nombre) {
@@ -61,6 +75,7 @@ export async function POST(req: NextRequest) {
         telefono: telefono || null,
         estado: estado || "activo",
         deudaCuota: deudaCuota ? parseFloat(deudaCuota) : 0,
+        clubId,
       },
     });
 

@@ -724,22 +724,8 @@ export default function AdminDashboard() {
             return;
           }
         } catch (error) {
-          console.log("API real no disponible, usando mock...");
+          console.error("Error cargando estadísticas:", error);
         }
-
-        // Fallback a estadísticas simuladas
-        setStats({
-          totalColectas: 8,
-          colectasActivas: 3,
-          totalMiembros: 45,
-          totalAportado: 2500,
-          totalIngresos: 800,
-          totalGastado: 1200,
-          balance: 2100,
-          aportesComprometidos: 500,
-          faltanteTotalColectas: 1200,
-          totalDeudas: 0,
-        });
       } catch (error) {
         console.error("Error cargando estadísticas:", error);
       } finally {

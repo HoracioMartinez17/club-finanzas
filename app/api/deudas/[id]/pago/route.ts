@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await context.params;
     const { cantidad, notas } = await req.json();
 
@@ -18,8 +25,8 @@ export async function POST(
     }
 
     // Obtener la deuda
-    const deuda = await prisma.deuda.findUnique({
-      where: { id },
+    const deuda = await prisma.deuda.findFirst({
+      where: { id, clubId },
       include: {
         pagos: true,
       },
@@ -45,6 +52,7 @@ export async function POST(
         deudaId: id,
         cantidad,
         notas: notas || null,
+        clubId: deuda.clubId,
       },
     });
 

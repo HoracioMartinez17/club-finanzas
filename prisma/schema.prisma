@@ -10,16 +10,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Club - Sistema multi-tenant
+model Club {
+  id          String   @id @default(cuid())
+  nombre      String
+  slug        String   @unique  // Para URL: /sporting, /olimpia
+  activo      Boolean  @default(true)
+  planId      String   @default("free") // free, pro, enterprise
+  logoUrl     String?
+  createdBy   String?  // ID del super admin que lo creó
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  usuarios    User[]
+  miembros    Miembro[]
+  colectas    Colecta[]
+  aportes     Aporte[]
+  gastos      Gasto[]
+  ingresos    Ingreso[]
+  deudas      Deuda[]
+  pagosDeuda  PagoDeuda[]
+  config      Config?
+  auditLogs   AuditLog[]
+
+  @@map("clubes")
+}
+
 // Usuario - Directiva del club
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  nombre    String
-  password  String
-  rol       String     @default("admin") // admin, tesorero
-  activo    Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  nombre       String
+  password     String
+  rol          String   @default("admin") // admin, tesorero
+  activo       Boolean  @default(true)
+  isSuperAdmin Boolean  @default(false) // true = super admin (puede crear clubes)
+  clubId       String?  // null para super admin, requerido para usuarios de club
+  club         Club?    @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("users")
 }
@@ -32,6 +62,8 @@ model Miembro {
   telefono          String?
   estado            String   @default("activo") // activo, inactivo
   deudaCuota        Float    @default(0)
+  clubId            String
+  club              Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -53,6 +85,8 @@ model Colecta {
   estado      String   @default("activa") // activa, cerrada, completada
   fechaInicio DateTime @default(now())
   fechaCierre DateTime?
+  clubId      String
+  club        Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -75,6 +109,8 @@ model Aporte {
   estado        String   @default("aportado") // aportado, comprometido
   metodoPago    String?  // efectivo, transferencia
   notas         String?
+  clubId        String
+  club          Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -95,6 +131,8 @@ model Gasto {
   tipoGasto       String   @default("general") // general, colecta
   comprobante     String?  // URL del comprobante
   notas           String?
+  clubId          String
+  club            Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -111,6 +149,8 @@ model Ingreso {
   miembroId     String?
   miembroNombre String?  // Guardar nombre para historial
   fecha         DateTime @default(now())
+  clubId        String
+  club          Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -130,6 +170,8 @@ model Deuda {
   estado          String   @default("pendiente") // pendiente, parcial_pagada, pagada
   fecha           DateTime @default(now())
   notas           String?
+  clubId          String
+  club            Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -147,6 +189,8 @@ model PagoDeuda {
   cantidad  Float
   fecha     DateTime @default(now())
   notas     String?
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@map("pagos_deuda")
@@ -158,6 +202,29 @@ model Config {
   transparenciaPublica Boolean @default(true) // true = mostrar detalles, false = ocultar
   nombreClub          String  @default("Club de Fútbol")
   descripcionClub     String?
+  clubId              String   @unique
+  club                Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
 
   @@map("configs")
+}
+
+// Registro de auditoría para acciones críticas (seguridad)
+model AuditLog {
+  id            String   @id @default(cuid())
+  clubId        String
+  club          Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  userId        String?  // Usuario que realizó la acción (null para acciones del sistema)
+  userName      String?  // Nombre del usuario para historial
+  action        String   // Ej: USER_DELETE, USER_CREATE, PASSWORD_CHANGE, ROLE_CHANGE
+  entityType    String   // Ej: User, Miembro, Deuda, Config
+  entityId      String?  // ID de la entidad afectada
+  details       String?  // JSON con detalles adicionales
+  ipAddress     String?  // IP desde donde se realizó la acción
+  userAgent     String?  // Navegador/dispositivo del usuario
+  createdAt     DateTime @default(now())
+
+  @@map("audit_logs")
+  @@index([clubId, createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
 }

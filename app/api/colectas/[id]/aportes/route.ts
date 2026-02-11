@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id: colectaId } = await params;
 
     if (!colectaId) {
@@ -15,6 +22,7 @@ export async function GET(
     const aportes = await prisma.aporte.findMany({
       where: {
         colectaId: colectaId,
+        clubId,
       },
       include: {
         miembro: true,

@@ -17,6 +17,7 @@ interface Colecta {
 export default function Home() {
   const [colectas, setColectas] = useState<Colecta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [filtro, setFiltro] = useState<"todas" | "activas" | "cerradas" | "completadas">(
     "todas",
   );
@@ -25,27 +26,28 @@ export default function Home() {
     const cargarColectas = async () => {
       try {
         const params = filtro === "todas" ? "" : `?estado=${filtro}`;
+        setError("");
 
-        // Intentar API real primero, si falla usar mock
-        try {
-          const res = await fetch(`/api/colectas${params}`);
-          if (res.ok) {
-            const data = await res.json();
-            setColectas(data);
-            return;
-          }
-        } catch (error) {
-          console.log("API real no disponible, usando mock...");
+        const activeClubId = sessionStorage.getItem("active_admin_clubId");
+        const token =
+          (activeClubId
+            ? localStorage.getItem(`token_admin_${activeClubId}`)
+            : localStorage.getItem("token_admin")) ||
+          localStorage.getItem("token_superadmin");
+        const res = await fetch(`/api/colectas${params}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (!res.ok) {
+          throw new Error("No se pudieron cargar las colectas");
         }
 
-        // Fallback a mock si la API real falla
-        const resMock = await fetch(`/api/colectas/mock${params}`);
-        if (resMock.ok) {
-          const data = await resMock.json();
-          setColectas(data);
-        }
+        const data = await res.json();
+        setColectas(data);
       } catch (error) {
         console.error("Error cargando colectas:", error);
+        setError("No se pudieron cargar las colectas");
+        setColectas([]);
       } finally {
         setLoading(false);
       }
@@ -97,6 +99,10 @@ export default function Home() {
         {loading ? (
           <div className="text-center py-12">
             <p className="text-gray-600">Cargando colectas...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 border border-gray-200">
+            <p className="text-gray-600">{error}</p>
           </div>
         ) : colectas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

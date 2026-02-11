@@ -16,6 +16,16 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        password: true,
+        rol: true,
+        activo: true,
+        isSuperAdmin: true,
+        clubId: true,
+      },
     });
 
     if (!user) {
@@ -32,7 +42,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Usuario inactivo" }, { status: 401 });
     }
 
-    const token = signToken({ id: user.id, email: user.email, rol: user.rol });
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      rol: user.rol,
+      isSuperAdmin: user.isSuperAdmin,
+      clubId: user.clubId,
+    });
 
     const response = NextResponse.json({
       success: true,
@@ -42,14 +58,30 @@ export async function POST(req: NextRequest) {
         email: user.email,
         nombre: user.nombre,
         rol: user.rol,
+        isSuperAdmin: user.isSuperAdmin,
+        clubId: user.clubId,
       },
     });
 
-    response.cookies.set("token", token, {
+    const cookieName = user.isSuperAdmin
+      ? "token_superadmin"
+      : user.clubId
+        ? `token_admin_${user.clubId}`
+        : "token_admin";
+
+    response.cookies.set(cookieName, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 7 días
+    });
+
+    // Limpiar cookie legacy si existe
+    response.cookies.set("token", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 0,
     });
 
     return response;

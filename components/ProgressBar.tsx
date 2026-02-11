@@ -7,7 +7,8 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ total, objetivo, label }: ProgressBarProps) {
-  const porcentaje = Math.min((total / objetivo) * 100, 100);
+  const safeObjetivo = objetivo > 0 ? objetivo : 0;
+  const porcentaje = safeObjetivo > 0 ? Math.min((total / safeObjetivo) * 100, 100) : 0;
 
   const getBarColor = () => {
     if (porcentaje < 30) return "bg-red-600";
@@ -30,10 +31,6 @@ export function ProgressBar({ total, objetivo, label }: ProgressBarProps) {
         <span className="text-xl md:text-base font-bold text-gray-900 min-w-max">
           {Math.round(porcentaje)}%
         </span>
-      </div>
-      <div className="flex justify-between items-end gap-2 mt-3 text-xs md:text-xs">
-        <span className="text-gray-600">₲ {formatCompactNumber(total)}</span>
-        <span className="text-gray-600">₲ {formatCompactNumber(objetivo)}</span>
       </div>
     </div>
   );

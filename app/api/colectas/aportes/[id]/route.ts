@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const aporte = await prisma.aporte.findUnique({
-      where: { id },
+    const aporte = await prisma.aporte.findFirst({
+      where: { id, clubId },
       include: {
         miembro: true,
         colecta: true,
@@ -31,11 +38,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
     const { miembroId, cantidad, estado, metodoPago, notas } = await req.json();
 
-    const aporte = await prisma.aporte.findUnique({
-      where: { id },
+    const aporte = await prisma.aporte.findFirst({
+      where: { id, clubId },
     });
 
     if (!aporte) {
@@ -51,6 +64,9 @@ export async function PUT(
 
       if (!miembro) {
         return NextResponse.json({ error: "Miembro no encontrado" }, { status: 404 });
+      }
+      if (miembro.clubId !== clubId) {
+        return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
       }
       nuevoMiembroNombre = miembro.nombre;
     }
@@ -86,9 +102,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const aporte = await prisma.aporte.findUnique({
-      where: { id },
+    const aporte = await prisma.aporte.findFirst({
+      where: { id, clubId },
     });
 
     if (!aporte) {

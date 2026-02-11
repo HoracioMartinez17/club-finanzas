@@ -37,11 +37,22 @@ export default function LoginPage() {
       // Guardar token en cookies (la API lo hace)
       // También guardamos en localStorage para acceso del cliente
       if (data.token) {
-        localStorage.setItem("token", data.token);
+        if (data.user?.isSuperAdmin) {
+          localStorage.setItem("token_superadmin", data.token);
+        } else if (data.user?.clubId) {
+          const clubTokenKey = `token_admin_${data.user.clubId}`;
+          localStorage.setItem(clubTokenKey, data.token);
+          sessionStorage.setItem("active_admin_clubId", data.user.clubId);
+        } else {
+          localStorage.setItem("token_admin", data.token);
+        }
+        localStorage.removeItem("token");
       }
 
       // Redirigir según el rol
-      if (data.user?.rol === "admin") {
+      if (data.user?.isSuperAdmin) {
+        router.push("/super-admin/clubes");
+      } else if (data.user?.rol === "admin") {
         router.push("/admin/dashboard");
       } else {
         router.push("/");
@@ -145,12 +156,18 @@ export default function LoginPage() {
         <div className="text-center space-y-3">
           <p className="text-xs text-slate-400">
             No eres admin?{" "}
-            <Link href="/" className="text-blue-400 hover:text-blue-300 hover:underline font-medium transition-colors">
+            <Link
+              href="/"
+              className="text-blue-400 hover:text-blue-300 hover:underline font-medium transition-colors"
+            >
               Volver al inicio
             </Link>
           </p>
           <p className="text-xs text-slate-500">© 2026 Club Finanzas</p>
-          <p className="text-xs text-slate-600">Creado por <span className="text-purple-500 font-medium">Horacio Benítez</span></p>
+          <p className="text-xs text-slate-600">
+            Creado por{" "}
+            <span className="text-purple-500 font-medium">Horacio Benítez</span>
+          </p>
         </div>
       </div>
     </div>

@@ -49,7 +49,10 @@ export function getStatusColor(status: string): string {
   return colors[status] || "bg-gray-100 text-gray-800";
 }
 
-export function formatCompactNumber(value: number): string {
+export function formatCompactNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "0";
+  }
   if (value >= 1000000) {
     const millions = value / 1000000;
     return (

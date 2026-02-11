@@ -62,24 +62,13 @@ export default function AdminColectas() {
 
   const cargarColectas = async () => {
     try {
-      // Intentar API real
-      try {
-        const res = await fetch("/api/colectas");
-        if (res.ok) {
-          const data = await res.json();
-          setColectas(data);
-          return;
-        }
-      } catch {
-        console.log("API real no disponible");
+      const res = await fetch("/api/colectas");
+      if (!res.ok) {
+        throw new Error("Error al cargar colectas");
       }
 
-      // Fallback a mock
-      const res = await fetch("/api/colectas/mock");
-      if (res.ok) {
-        const data = await res.json();
-        setColectas(data);
-      }
+      const data = await res.json();
+      setColectas(data);
     } catch (error) {
       console.error("Error:", error);
     } finally {

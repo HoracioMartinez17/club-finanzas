@@ -1,12 +1,21 @@
-import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const payload = getAuthPayload(request);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const usuarios = await prisma.user.findMany({
+      where: {
+        clubId,
+        isSuperAdmin: false, // Excluir super administradores
+      },
       select: {
         id: true,
         nombre: true,
@@ -27,8 +36,14 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const payload = getAuthPayload(request);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { nombre, email, password, rol } = await request.json();
 
     // Validaciones
@@ -56,6 +71,7 @@ export async function POST(request: Request) {
         password: hashedPassword,
         rol,
         activo: true,
+        clubId,
       },
       select: {
         id: true,

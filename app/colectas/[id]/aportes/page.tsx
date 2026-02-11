@@ -33,23 +33,18 @@ export default function AportesPage() {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        // Intentar API real primero
-        try {
-          const resColecta = await fetch(`/api/colectas/${id}`);
-          if (resColecta.ok) {
-            const data = await resColecta.json();
-            setColecta(data);
-            setAportes(data.aportes || []);
-            return;
-          }
-        } catch (error) {
-          console.log("API real no disponible, usando mock...");
-        }
+        const activeClubId = sessionStorage.getItem("active_admin_clubId");
+        const token =
+          (activeClubId
+            ? localStorage.getItem(`token_admin_${activeClubId}`)
+            : localStorage.getItem("token_admin")) ||
+          localStorage.getItem("token_superadmin");
+        const resColecta = await fetch(`/api/colectas/${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
 
-        // Fallback a mock
-        const resMock = await fetch(`/api/colectas/mock/${id}`);
-        if (resMock.ok) {
-          const data = await resMock.json();
+        if (resColecta.ok) {
+          const data = await resColecta.json();
           setColecta(data);
           setAportes(data.aportes || []);
         } else {

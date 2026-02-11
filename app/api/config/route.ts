@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    let config = await prisma.config.findFirst();
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    let config = await prisma.config.findFirst({
+      where: { clubId },
+    });
 
     if (!config) {
       config = await prisma.config.create({
         data: {
           transparenciaPublica: true,
           nombreClub: "Club de Fútbol",
+          clubId,
         },
       });
     }
@@ -30,9 +40,17 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { transparenciaPublica, nombreClub, descripcionClub } = await req.json();
 
-    let config = await prisma.config.findFirst();
+    let config = await prisma.config.findFirst({
+      where: { clubId },
+    });
 
     if (!config) {
       config = await prisma.config.create({
@@ -40,6 +58,7 @@ export async function PUT(req: NextRequest) {
           transparenciaPublica: transparenciaPublica ?? true,
           nombreClub: nombreClub ?? "Club de Fútbol",
           descripcionClub: descripcionClub,
+          clubId,
         },
       });
     } else {

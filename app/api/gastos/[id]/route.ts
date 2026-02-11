@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const gasto = await prisma.gasto.findUnique({
-      where: { id },
+    const gasto = await prisma.gasto.findFirst({
+      where: { id, clubId },
       include: {
         quienPago: true,
         colecta: true,
@@ -31,12 +38,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
     const { concepto, cantidad, categoria, quienPagoId, comprobante, notas } =
       await req.json();
 
-    const gasto = await prisma.gasto.findUnique({
-      where: { id },
+    const gasto = await prisma.gasto.findFirst({
+      where: { id, clubId },
     });
 
     if (!gasto) {
@@ -50,6 +63,9 @@ export async function PUT(
         where: { id: quienPagoId },
       });
       if (miembro) {
+        if (miembro.clubId !== clubId) {
+          return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+        }
         quienPagoNombre = miembro.nombre;
       }
     }
@@ -86,9 +102,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
-    const gasto = await prisma.gasto.findUnique({
-      where: { id },
+    const gasto = await prisma.gasto.findFirst({
+      where: { id, clubId },
     });
 
     if (!gasto) {

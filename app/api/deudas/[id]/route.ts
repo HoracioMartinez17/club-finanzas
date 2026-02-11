@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { getAuthPayload } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await context.params;
 
-    const deuda = await prisma.deuda.findUnique({
-      where: { id },
+    const deuda = await prisma.deuda.findFirst({
+      where: { id, clubId },
       include: {
         miembro: true,
         pagos: true,
@@ -32,12 +39,18 @@ export async function PUT(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await context.params;
     const { concepto, montoOriginal, notas } = await req.json();
 
     // Verificar que la deuda existe
-    const deudaExistente = await prisma.deuda.findUnique({
-      where: { id },
+    const deudaExistente = await prisma.deuda.findFirst({
+      where: { id, clubId },
     });
 
     if (!deudaExistente) {
@@ -91,11 +104,17 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const payload = getAuthPayload(req);
+    const clubId = payload?.clubId;
+    if (!clubId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await context.params;
 
     // Verificar que la deuda existe
-    const deuda = await prisma.deuda.findUnique({
-      where: { id },
+    const deuda = await prisma.deuda.findFirst({
+      where: { id, clubId },
     });
 
     if (!deuda) {
