@@ -15,12 +15,22 @@ async function main() {
 
   console.log("📝 Creando usuarios (Directiva)...");
 
+  // Test credentials - these should be changed immediately after first login in production
+  const adminPassword = await bcrypt.hash(
+    process.env.TEST_ADMIN_PASSWORD || "***REMOVED***",
+    10,
+  );
+  const tesoreroPassword = await bcrypt.hash(
+    process.env.TEST_TESORERO_PASSWORD || "***REMOVED***",
+    10,
+  );
+
   const users = await Promise.all([
     prisma.user.create({
       data: {
         email: "admin@club.com",
         nombre: "Admin Club",
-        password: await bcrypt.hash("admin123", 10),
+        password: adminPassword,
         rol: "admin",
         activo: true,
       },
@@ -29,7 +39,7 @@ async function main() {
       data: {
         email: "tesorero@club.com",
         nombre: "Juan Tesorero",
-        password: await bcrypt.hash("tesorero123", 10),
+        password: tesoreroPassword,
         rol: "tesorero",
         activo: true,
       },
@@ -415,9 +425,13 @@ async function main() {
   });
 
   console.log("✅ Seed completado con éxito!");
-  console.log("👤 Usuarios de prueba:");
-  console.log("  - admin@club.com / admin123");
-  console.log("  - tesorero@club.com / tesorero123");
+  console.log("👤 Usuarios de prueba creados:");
+  console.log("  - admin@club.com");
+  console.log("  - tesorero@club.com");
+  console.log("⚠️  Cambia las contraseñas inmediatamente después del primer acceso.");
+  console.log(
+    "💡 Define TEST_ADMIN_PASSWORD y TEST_TESORERO_PASSWORD en .env para personalizarlas.",
+  );
 }
 
 main()
