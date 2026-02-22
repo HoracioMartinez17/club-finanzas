@@ -63,3 +63,6 @@ Thumbs.db
 .env.example
 prisma/create-super-admin.ts
 prisma/create-test-club.ts
+# Documentación: mantener público solo README.md
+*.md
+!README.md
