@@ -10,13 +10,23 @@ Se ha creado un **panel de administración completo** con:
 
 - **Dashboard** con estadísticas en tiempo real
   ![Dashboard del panel de administración](public/image/Dashboard-club.png)
+
+  ---
 - **Gestión de Colectas** - Crear, editar, eliminar
   ![Gestión de colectas](public/image/colectas.png)
+
+  ---
 - **Gestión de Miembros** - Control de miembros y deudas
   ![Gestión de miembros](public/image/miembros.png)
+
+  ---
   ![Control de deudas de miembros](public/image/deudas.png)
+
+  ---
 - **Historial de Aportes** - Seguimiento completo
   ![Historial de aportes](public/image/aportes.png)
+
+  ---
 - **Registro de Gastos** - Categorización y responsables
   _Captura pendiente_
 - **Gestión de Usuarios** - Administrador y tesorero
